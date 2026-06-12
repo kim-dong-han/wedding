@@ -1,6 +1,6 @@
 import { motion, useScroll, useSpring } from 'framer-motion';
 import { weddingData } from './data/wedding-info';
-import { MapPin, Phone, Copy, ExternalLink, Calendar as CalendarIcon, Heart, Share2, MessageCircle, Bell } from 'lucide-react';
+import { MapPin, Phone, Copy, Heart, Share2, MessageCircle, Bell } from 'lucide-react';
 import MainCover from './components/MainCover';
 import { useEffect, useState } from 'react';
 
@@ -10,13 +10,6 @@ const fadeInUp = {
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-100px" },
   transition: { duration: 1, ease: [0.16, 1, 0.3, 1] }
-};
-
-const staggerContainer = {
-  initial: { opacity: 0 },
-  whileInView: { opacity: 1 },
-  viewport: { once: true },
-  transition: { staggerChildren: 0.1 }
 };
 
 // --- D-Day Counter Component ---
@@ -276,6 +269,7 @@ function App() {
       <motion.div className="fixed top-0 left-0 right-0 h-[2px] bg-stone-900 origin-left z-[100]" style={{ scaleX }} />
       
       <MainCover />
+      <DDayCounter />
       
       {/* Greeting */}
       <section className="py-40 px-10 text-center bg-[#fafaf9] relative overflow-hidden">
