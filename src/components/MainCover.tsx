@@ -1,8 +1,8 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
-import { weddingData } from '../data/wedding-info';
+import type { WeddingInfo } from '../data/wedding-info';
 
-const MainCover = () => {
+const MainCover = ({ data }: { data: WeddingInfo }) => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -46,7 +46,7 @@ const MainCover = () => {
             transition={{ duration: 1, delay: 0.5 }}
             className="text-7xl md:text-9xl font-serif text-white tracking-tighter"
           >
-            {weddingData.groom.name}
+            {data.groom.name}
           </motion.h1>
           <motion.div 
             initial={{ width: 0 }}
@@ -60,7 +60,7 @@ const MainCover = () => {
             transition={{ duration: 1, delay: 0.8 }}
             className="text-7xl md:text-9xl font-serif text-white tracking-tighter"
           >
-            {weddingData.bride.name}
+            {data.bride.name}
           </motion.h1>
         </div>
 
@@ -71,10 +71,10 @@ const MainCover = () => {
           className="space-y-4"
         >
           <p className="text-xl md:text-2xl font-serif text-white/90 tracking-[0.2em]">
-            2024 . 10 . 26
+            {data.date.replace(/-/g, ' . ')}
           </p>
           <p className="text-[11px] md:text-sm text-white/60 uppercase tracking-[0.4em]">
-            Saturday . 01:00 PM
+            {data.time}
           </p>
         </motion.div>
       </motion.div>
@@ -89,7 +89,7 @@ const MainCover = () => {
       {/* Bottom Label */}
       <div className="absolute bottom-10 left-0 w-full flex justify-between px-10 items-end z-20">
         <div className="text-[10px] text-stone-400 rotate-90 origin-left translate-y-[-100%] uppercase tracking-widest">
-          Est. 2024
+          Est. {data.date.split('-')[0]}
         </div>
         <motion.div 
           animate={{ opacity: [0.3, 1, 0.3] }}
@@ -100,7 +100,7 @@ const MainCover = () => {
           <div className="w-[1px] h-20 bg-gradient-to-b from-stone-400 to-transparent" />
         </motion.div>
         <div className="text-[10px] text-stone-400 uppercase tracking-widest leading-loose text-right">
-          The Riverside<br />Hotel Seoul
+          {data.location.name.split(' ').slice(0, -1).join(' ')}<br />{data.location.name.split(' ').slice(-1)}
         </div>
       </div>
     </section>
