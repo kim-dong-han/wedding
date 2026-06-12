@@ -245,7 +245,7 @@ const AccountSection = () => {
   );
 };
 
-// --- App Root ---
+// --- App Root (Final Deployment Trigger) ---
 function App() {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
