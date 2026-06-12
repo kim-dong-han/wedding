@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap');
+
+:root {
+  font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-wedding-accent text-gray-800 antialiased overflow-x-hidden;
+}
+
+.font-serif {
+  font-family: 'Nanum Myeongjo', serif;
+}
