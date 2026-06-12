@@ -34,7 +34,7 @@ const MainCover = ({ data }: { data: WeddingInfo }) => {
           initial={{ opacity: 0, letterSpacing: "0.2em" }}
           animate={{ opacity: 1, letterSpacing: "0.8em" }}
           transition={{ duration: 1.5, ease: "easeOut" }}
-          className="text-[10px] md:text-xs text-white/80 uppercase font-light mb-12"
+          className="text-[15px] md:text-[15px] text-white/80 uppercase font-light mb-12"
         >
           Special Invitation
         </motion.div>
@@ -73,7 +73,7 @@ const MainCover = ({ data }: { data: WeddingInfo }) => {
           <p className="text-xl md:text-2xl font-serif text-white/90 tracking-[0.2em]">
             {data.date.replace(/-/g, ' . ')}
           </p>
-          <p className="text-[11px] md:text-sm text-white/60 uppercase tracking-[0.4em]">
+          <p className="text-[15px] md:text-sm text-white/60 uppercase tracking-[0.4em]">
             {data.time}
           </p>
         </motion.div>
@@ -88,7 +88,7 @@ const MainCover = ({ data }: { data: WeddingInfo }) => {
       
       {/* Bottom Label */}
       <div className="absolute bottom-10 left-0 w-full flex justify-between px-10 items-end z-20">
-        <div className="text-[10px] text-stone-400 rotate-90 origin-left translate-y-[-100%] uppercase tracking-widest">
+        <div className="text-[15px] text-stone-400 rotate-90 origin-left translate-y-[-100%] uppercase tracking-widest">
           Est. {data.date.split('-')[0]}
         </div>
         <motion.div 
@@ -96,10 +96,10 @@ const MainCover = ({ data }: { data: WeddingInfo }) => {
           transition={{ duration: 2, repeat: Infinity }}
           className="flex flex-col items-center gap-4"
         >
-          <span className="text-[9px] uppercase tracking-[0.3em] text-stone-400 font-bold">Scroll Down</span>
+          <span className="text-[13px] uppercase tracking-[0.3em] text-stone-400 font-bold">Scroll Down</span>
           <div className="w-[1px] h-20 bg-gradient-to-b from-stone-400 to-transparent" />
         </motion.div>
-        <div className="text-[10px] text-stone-400 uppercase tracking-widest leading-loose text-right">
+        <div className="text-[15px] text-stone-400 uppercase tracking-widest leading-loose text-right">
           {data.location.name.split(' ').slice(0, -1).join(' ')}<br />{data.location.name.split(' ').slice(-1)}
         </div>
       </div>

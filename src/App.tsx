@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
 import { loadWeddingData, loadRsvps, saveRsvps, loadGuestbook, saveGuestbook, type WeddingInfo, type RsvpEntry, type GuestbookEntry } from './data/wedding-info';
-import { MapPin, Phone, Copy, Heart, Share2, MessageCircle, Bell, ChevronDown, X, Send, Play, Pause } from 'lucide-react';
+import { MapPin, Phone, Copy, Heart, Share2, MessageCircle, X, Send, Play, Pause } from 'lucide-react';
 import MainCover from './components/MainCover';
 import AdminPage from './pages/AdminPage';
 import { useEffect, useState, useRef } from 'react';
@@ -13,13 +13,60 @@ const fadeInUp = {
   transition: { duration: 1, ease: [0.16, 1, 0.3, 1] }
 };
 
+const SectionNav = () => {
+  const sections = [
+    { id: 'cover', label: 'Cover' },
+    { id: 'greeting', label: 'Greeting' },
+    { id: 'gallery', label: 'Gallery' },
+    { id: 'location', label: 'Location' },
+    { id: 'account', label: 'Account' },
+    { id: 'rsvp', label: 'RSVP' },
+    { id: 'guestbook', label: 'Guestbook' },
+  ]
+  const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const idx = sections.findIndex(s => s.id === entry.target.id)
+          if (idx !== -1) setActive(idx)
+        }
+      })
+    }, { rootMargin: '-45% 0px -45% 0px' })
+
+    const els = sections.map(s => document.getElementById(s.id)).filter(Boolean)
+    els.forEach(el => el && observer.observe(el))
+    return () => observer.disconnect()
+  }, [])
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  return (
+    <nav className="fixed right-3 md:right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2.5">
+      {sections.map((s, i) => (
+        <button
+          key={s.id}
+          onClick={() => scrollTo(s.id)}
+          className={`w-2 h-2 rounded-full transition-all duration-500 ${
+            i === active ? 'bg-stone-900 scale-150' : 'bg-stone-300/60 hover:bg-stone-400/80'
+          }`}
+          aria-label={s.label}
+        />
+      ))}
+    </nav>
+  )
+}
+
 function WeddingPage() {
   const [data] = useState<WeddingInfo>(() => loadWeddingData())
   const [rsvps, setRsvps] = useState<RsvpEntry[]>(() => loadRsvps())
   const [guestbook, setGuestbook] = useState<GuestbookEntry[]>(() => loadGuestbook())
   const [showRsvpForm, setShowRsvpForm] = useState(false)
   const [showGuestbookForm, setShowGuestbookForm] = useState(false)
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null)
+  const [showQr, setShowQr] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -83,7 +130,7 @@ function WeddingPage() {
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute -top-8 right-0 text-[10px] text-stone-400 bg-white px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap"
+              className="absolute -top-8 right-0 text-[15px] text-stone-400 bg-white px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap"
             >
               {data.bgm.title || '배경음악'}
             </motion.p>
@@ -91,117 +138,152 @@ function WeddingPage() {
         </div>
       )}
 
-      <MainCover data={data} />
+      {/* Mobile QR Button */}
+      <div className="fixed bottom-8 left-8 z-[200]">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowQr(!showQr)}
+          className="w-10 h-10 bg-white text-stone-500 rounded-full flex items-center justify-center shadow-lg border border-stone-200 text-[15px] font-bold tracking-tight"
+        >
+          QR
+        </motion.button>
+        <AnimatePresence>
+          {showQr && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 10 }}
+              className="absolute bottom-14 left-0 bg-white rounded-2xl p-4 shadow-2xl border border-stone-100"
+            >
+              <p className="text-[13px] text-stone-400 text-center mb-2 tracking-widest uppercase">Mobile View</p>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`}
+                alt="QR Code"
+                className="w-36 h-36 rounded-xl"
+              />
+              <p className="text-[12px] text-stone-400 text-center mt-2">QR을 스캔하여 모바일에서 열기</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      <DDayCounter targetDate={data.date} />
-      <Greeting data={data} />
-      <WeddingCalendar month={new Date(data.date).getMonth()} year={new Date(data.date).getFullYear()} day={parseInt(data.date.split('-')[2])} time={data.time} />
-      <GallerySection images={data.gallery} />
-      <LocationSection data={data} />
+      <SectionNav />
 
-      {data.interview.length > 0 && (
-        <InterviewSection interview={data.interview} expanded={expandedFaq} onToggle={setExpandedFaq} />
-      )}
+      <div id="cover"><MainCover data={data} /></div>
+      <div id="greeting"><Greeting data={data} /></div>
+      <div id="gallery"><GallerySection images={data.gallery} /></div>
+      <div id="location"><LocationSection data={data} transportation={data.transportation} /></div>
+      <div id="account"><AccountSection data={data} /></div>
 
-      {data.notices.length > 0 && (
-        <NoticesSection notices={data.notices} />
-      )}
+      <div id="rsvp">
+        <RsvpSection
+          showForm={showRsvpForm}
+          onToggle={() => setShowRsvpForm(!showRsvpForm)}
+          onSubmit={(entry) => setRsvps(prev => [...prev, entry])}
+        />
+      </div>
 
-      {data.transportation.length > 0 && (
-        <TransportSection items={data.transportation} />
-      )}
+      <div id="guestbook">
+        <GuestbookSection
+          entries={guestbook}
+          showForm={showGuestbookForm}
+          onToggle={() => setShowGuestbookForm(!showGuestbookForm)}
+          onSubmit={(entry) => setGuestbook(prev => [...prev, entry])}
+          onDelete={(id) => {
+            const pw = prompt('방명록 비밀번호를 입력하세요');
+            const entry = guestbook.find(g => g.id === id);
+            if (entry && pw === entry.password) {
+              setGuestbook(prev => prev.filter(g => g.id !== id));
+            } else {
+              alert('비밀번호가 올바르지 않습니다.');
+            }
+          }}
+        />
+      </div>
 
-      <AccountSection data={data} />
-
-      <RsvpSection
-        showForm={showRsvpForm}
-        onToggle={() => setShowRsvpForm(!showRsvpForm)}
-        onSubmit={(entry) => setRsvps(prev => [...prev, entry])}
-      />
-
-      <GuestbookSection
-        entries={guestbook}
-        showForm={showGuestbookForm}
-        onToggle={() => setShowGuestbookForm(!showGuestbookForm)}
-        onSubmit={(entry) => setGuestbook(prev => [...prev, entry])}
-        onDelete={(id) => {
-          const pw = prompt('방명록 비밀번호를 입력하세요');
-          const entry = guestbook.find(g => g.id === id);
-          if (entry && pw === entry.password) {
-            setGuestbook(prev => prev.filter(g => g.id !== id));
-          } else {
-            alert('비밀번호가 올바르지 않습니다.');
-          }
-        }}
-      />
-
-      <Footer data={data} onKakaoShare={handleKakaoShare} onCopyLink={copyLink} />
+      <div id="footer"><Footer data={data} onKakaoShare={handleKakaoShare} onCopyLink={copyLink} /></div>
     </main>
   );
 }
 
-const DDayCounter = ({ targetDate }: { targetDate: string }) => {
+const Greeting = ({ data }: { data: WeddingInfo }) => {
   const [daysLeft, setDaysLeft] = useState(0);
 
   useEffect(() => {
-    const target = new Date(targetDate).getTime();
+    const target = new Date(data.date).getTime();
     const today = new Date().getTime();
     const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
     setDaysLeft(diff);
-  }, [targetDate]);
+  }, [data.date]);
 
   return (
-    <motion.div {...fadeInUp} className="flex flex-col items-center gap-4 py-10">
-      <div className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Countdown</div>
-      <div className="text-5xl font-serif text-stone-800 tracking-tighter">
-        D-{daysLeft}
-      </div>
-      <div className="flex gap-1">
-        {Array(3).fill(0).map((_, i) => <div key={i} className="w-1 h-1 bg-wedding-secondary/30 rounded-full" />)}
-      </div>
-    </motion.div>
-  );
-};
-
-const Greeting = ({ data }: { data: WeddingInfo }) => (
-  <section className="py-40 px-10 text-center bg-[#fafaf9] relative overflow-hidden">
+  <section className="py-10 md:py-14 px-8 text-center bg-[#fafaf9] relative overflow-hidden">
     <motion.div
       initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 1.5 }}
-      className="max-w-lg mx-auto space-y-24"
+      className="max-w-lg mx-auto space-y-8"
     >
       <div className="relative flex flex-col items-center">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-10 w-24 h-24 border border-stone-200 rounded-full border-dashed"
+          className="absolute -top-8 w-20 h-20 border border-stone-200 rounded-full border-dashed"
         />
-        <Heart size={32} className="text-wedding-secondary/30 fill-wedding-secondary/5 relative z-10" />
+        <Heart size={24} className="text-wedding-secondary/30 fill-wedding-secondary/5 relative z-10" />
       </div>
 
-      <p className="text-stone-700 font-serif font-light leading-[2.8] text-xl md:text-3xl whitespace-pre-line italic px-4 tracking-tighter">
+      <p className="text-stone-700 font-serif font-light leading-[2.4] text-lg md:text-2xl whitespace-pre-line italic px-2 tracking-tighter">
         {data.message}
       </p>
 
-      <div className="pt-20 border-t border-stone-200 flex flex-col gap-12">
+      {/* Wedding Info Card */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 space-y-3">
+        <p className="text-[15px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Wedding Day</p>
+        <div className="flex items-center justify-center gap-3">
+          <div className="flex-shrink-0 flex flex-col items-center w-10 h-10 bg-white rounded-lg border border-stone-200 shadow-sm overflow-hidden">
+            <span className="text-[6px] bg-wedding-primary text-white w-full py-0.5 font-bold uppercase tracking-wider leading-none">
+              {new Date(data.date).toLocaleDateString('en', { month: 'short' })}
+            </span>
+            <span className="text-sm font-serif font-bold text-stone-800 leading-none mt-0.5">
+              {parseInt(data.date.split('-')[2])}
+            </span>
+          </div>
+          <p className="text-base font-serif text-stone-800">
+            {new Date(data.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+          </p>
+        </div>
+        <p className="text-sm text-stone-500">{data.time}</p>
+        <div className="w-6 h-[1px] bg-stone-200 mx-auto" />
+        <p className="text-sm text-stone-700 font-medium">{data.location.name}</p>
+        {data.location.hall && <p className="text-[15px] text-wedding-primary">{data.location.hall}</p>}
+        <p className="text-[15px] text-stone-400">{data.location.address}</p>
+        <div className="pt-2">
+          <span className="inline-block px-3 py-1 bg-wedding-primary/10 text-wedding-primary text-[15px] font-bold rounded-full">
+            D-{daysLeft}
+          </span>
+        </div>
+      </div>
+
+      <div className="pt-6 border-t border-stone-200 flex flex-col gap-4">
         {[data.groom, data.bride].map((person, i) => (
           <motion.div
             key={i}
             whileHover={{ scale: 1.02 }}
-            className="flex items-center justify-between group px-6"
+            className="flex items-center justify-between group px-4"
           >
             <div className="text-left">
-              <p className="text-[10px] text-stone-400 mb-1 uppercase tracking-widest">Parent</p>
-              <p className="text-sm text-stone-600 font-light leading-relaxed">
-                {person.parents.father} <span className="text-stone-300 mx-1">·</span> {person.parents.mother}
+              <p className="text-[13px] text-stone-400 mb-0.5 uppercase tracking-widest">Parent</p>
+              <p className="text-[15px] text-stone-600 font-light leading-relaxed">
+                {person.parents.father} <span className="text-stone-300 mx-0.5">·</span> {person.parents.mother}
               </p>
             </div>
-            <div className="flex items-center gap-6">
-              <span className="text-[11px] text-wedding-primary/60 italic font-medium uppercase tracking-tighter">
+            <div className="flex items-center gap-4">
+              <span className="text-[15px] text-wedding-primary/60 italic font-medium uppercase tracking-tighter">
                 {person.parentRelation}
               </span>
-              <span className="font-serif text-4xl md:text-5xl text-stone-900 tracking-tighter group-hover:italic transition-all">
+              <span className="font-serif text-2xl md:text-3xl text-stone-900 tracking-tighter group-hover:italic transition-all">
                 {person.name}
               </span>
             </div>
@@ -210,76 +292,18 @@ const Greeting = ({ data }: { data: WeddingInfo }) => (
       </div>
     </motion.div>
   </section>
-);
-
-const WeddingCalendar = ({ month, year, day, time }: { month: number; year: number; day: number; time: string }) => {
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startDay = new Date(year, month, 1).getDay();
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  return (
-    <motion.div
-      {...fadeInUp}
-      className="max-w-md mx-auto mt-24 p-12 bg-white rounded-[4rem] shadow-[0_40px_100px_rgba(0,0,0,0.04)] border border-stone-50"
-    >
-      <div className="text-center mb-12 font-serif text-3xl text-stone-800 tracking-tighter">
-        {monthNames[month]}
-      </div>
-      <div className="grid grid-cols-7 gap-y-6 text-center">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-          <div key={d} className={`text-[10px] font-bold tracking-widest pb-4 ${d === 'S' ? 'text-wedding-secondary/60' : 'text-stone-300'}`}>{d}</div>
-        ))}
-        {Array(startDay).fill(0).map((_, i) => <div key={`empty-${i}`} />)}
-        {days.map(d => (
-          <div key={d} className="relative flex items-center justify-center h-12">
-            {d === day ? (
-              <div className="relative w-12 h-12 flex items-center justify-center cursor-default">
-                <motion.div
-                  animate={{
-                    opacity: [0.8, 1, 0.8],
-                    boxShadow: [
-                      "0 4px 10px rgba(142,151,117,0.2)",
-                      "0 4px 20px rgba(142,151,117,0.4)",
-                      "0 4px 10px rgba(142,151,117,0.2)"
-                    ]
-                  }}
-                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                  className="absolute inset-0 bg-wedding-primary rounded-full"
-                />
-                <span className="relative text-lg text-white font-serif font-bold italic z-10">{d}</span>
-              </div>
-            ) : (
-              <span className={`text-lg transition-all duration-500 ${
-                d % 7 === (7 - startDay) % 7 ? 'text-wedding-secondary/80' : 'text-stone-400 hover:text-stone-600'
-              }`}>{d}</span>
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="mt-16 flex flex-col items-center gap-2">
-        <p className="text-stone-400 text-[11px] tracking-[0.3em] font-light">CEREMONY AT {time.toUpperCase()}</p>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          className="text-[10px] text-wedding-primary flex items-center gap-1 border-b border-wedding-primary/20 pb-0.5 mt-4"
-        >
-          <Bell size={10} /> 캘린더에 일정 추가하기
-        </motion.button>
-      </div>
-    </motion.div>
-  );
-};
+);}
 
 const GallerySection = ({ images }: { images: string[] }) => {
   if (!images || images.length === 0) return null;
 
   return (
-    <section className="py-32 bg-[#fafaf9]">
-      <motion.div {...fadeInUp} className="text-center mb-24">
-        <h2 className="text-4xl font-serif text-stone-800 tracking-tighter mb-4 italic">The Moments</h2>
-        <p className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase">Eternal Love</p>
+    <section className="py-8 md:py-12 bg-[#fafaf9]">
+      <motion.div {...fadeInUp} className="text-center mb-8">
+        <h2 className="text-3xl font-serif text-stone-800 tracking-tighter mb-3 italic">The Moments</h2>
+        <p className="text-[13px] tracking-[0.5em] text-wedding-primary uppercase">Eternal Love</p>
       </motion.div>
-      <div className="columns-2 gap-6 px-6 max-w-5xl mx-auto space-y-6">
+      <div className="columns-2 gap-4 px-6 max-w-5xl mx-auto space-y-4">
         {images.map((src, i) => (
           <motion.div
             key={i}
@@ -288,7 +312,7 @@ const GallerySection = ({ images }: { images: string[] }) => {
             transition={{ duration: 0.8, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
             viewport={{ once: true }}
             whileHover={{ scale: 1.02, y: -5, transition: { duration: 0.3 } }}
-            className="break-inside-avoid rounded-[2rem] overflow-hidden shadow-2xl shadow-stone-200/50 cursor-pointer group relative"
+            className="break-inside-avoid rounded-2xl overflow-hidden shadow-lg shadow-stone-200/50 cursor-pointer group relative"
           >
             <img
               src={src}
@@ -304,132 +328,60 @@ const GallerySection = ({ images }: { images: string[] }) => {
   );
 };
 
-const LocationSection = ({ data }: { data: WeddingInfo }) => (
-  <section className="py-32 px-6 bg-white">
-    <motion.div {...fadeInUp} className="max-w-4xl mx-auto space-y-16">
-      <div className="text-center space-y-6">
-        <p className="text-[11px] tracking-[0.8em] text-wedding-primary font-bold uppercase">Location</p>
-        <h3 className="text-3xl font-serif text-stone-800 tracking-tighter">{data.location.name}</h3>
+const LocationSection = ({ data, transportation }: { data: WeddingInfo; transportation: { method: string; description: string }[] }) => (
+  <section className="py-10 md:py-14 px-6 bg-white">
+    <motion.div {...fadeInUp} className="max-w-4xl mx-auto space-y-8">
+      <div className="text-center space-y-3">
+        <p className="text-[15px] tracking-[0.8em] text-wedding-primary font-bold uppercase">Location</p>
+        <h3 className="text-2xl font-serif text-stone-800 tracking-tighter">{data.location.name}</h3>
         {data.location.hall && <p className="text-sm text-wedding-primary font-medium">{data.location.hall}</p>}
-        <p className="text-sm text-stone-500 font-light leading-relaxed max-w-xs mx-auto">{data.location.address}</p>
+        <p className="text-[15px] text-stone-500 font-light max-w-xs mx-auto">{data.location.address}</p>
       </div>
 
-      <div className="aspect-video rounded-[4rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.1)] border-[1px] border-stone-100 relative group">
+      <div className="aspect-video rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.08)] border border-stone-100 relative group">
         <div className="absolute inset-[-60px]">
           <iframe
             src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3164.7460613271424!2d${data.location.lng}!3d${data.location.lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sko!2skr!4v1710000000000`}
-            className="w-full h-full border-0 saturate-[1.1] contrast-[1.05]"
+            className="w-full h-full border-0"
             allowFullScreen={false}
             loading="lazy"
           ></iframe>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="flex gap-3 justify-center">
         <motion.a
           whileHover={{ scale: 1.05, backgroundColor: "#fafaf9" }}
           whileTap={{ scale: 0.95 }}
           href={`tel:${data.location.phone}`}
-          className="flex items-center justify-center gap-3 px-12 py-6 bg-white rounded-full text-[13px] font-bold text-stone-600 shadow-sm border border-stone-100"
+          className="flex items-center justify-center gap-2 px-8 py-4 bg-white rounded-full text-[15px] font-bold text-stone-600 shadow-sm border border-stone-100"
         >
-          <Phone size={16} /> CALL HOTEL
+          <Phone size={14} /> CALL
         </motion.a>
         <motion.button
           whileHover={{ scale: 1.05, backgroundColor: "#333" }}
           whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center gap-3 px-12 py-6 bg-stone-800 text-white rounded-full text-[13px] font-bold shadow-2xl shadow-stone-400"
+          className="flex items-center justify-center gap-2 px-8 py-4 bg-stone-800 text-white rounded-full text-[15px] font-bold shadow-xl shadow-stone-400"
           onClick={() => {
             const url = `https://map.kakao.com/link/to/${encodeURIComponent(data.location.name)},${data.location.lat},${data.location.lng}`;
             window.open(url, '_blank');
           }}
         >
-          <MapPin size={16} /> GET DIRECTIONS
+          <MapPin size={14} /> NAVI
         </motion.button>
       </div>
-    </motion.div>
-  </section>
-);
 
-const InterviewSection = ({ interview, expanded, onToggle }: {
-  interview: { question: string; answer: string }[]
-  expanded: number | null
-  onToggle: (i: number | null) => void
-}) => (
-  <section className="py-32 px-6 bg-white">
-    <motion.div {...fadeInUp} className="max-w-2xl mx-auto">
-      <div className="text-center mb-20">
-        <p className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Q&A</p>
-        <h2 className="text-3xl font-serif text-stone-800 tracking-tighter mt-4 italic">Love Story</h2>
-      </div>
-      <div className="space-y-4">
-        {interview.map((item, i) => (
-          <div key={i} className="bg-stone-50 rounded-2xl overflow-hidden">
-            <button
-              onClick={() => onToggle(expanded === i ? null : i)}
-              className="w-full flex items-center justify-between p-6 text-left"
-            >
-              <span className="text-sm font-bold text-stone-800">{item.question}</span>
-              <motion.div
-                animate={{ rotate: expanded === i ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown size={16} className="text-stone-400" />
-              </motion.div>
-            </button>
-            <AnimatePresence>
-              {expanded === i && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <p className="px-6 pb-6 text-sm text-stone-600 leading-relaxed">{item.answer}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  </section>
-);
-
-const NoticesSection = ({ notices }: { notices: { title: string; content: string }[] }) => (
-  <section className="py-20 px-6 bg-[#fafaf9]">
-    <motion.div {...fadeInUp} className="max-w-2xl mx-auto">
-      <div className="text-center mb-12">
-        <p className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Notice</p>
-        <h2 className="text-2xl font-serif text-stone-800 tracking-tighter mt-3">안내사항</h2>
-      </div>
-      <div className="space-y-4">
-        {notices.map((n, i) => (
-          <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100">
-            <h3 className="text-sm font-bold text-stone-800 mb-2">{n.title}</h3>
-            <p className="text-sm text-stone-500 leading-relaxed whitespace-pre-wrap">{n.content}</p>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  </section>
-);
-
-const TransportSection = ({ items }: { items: { method: string; description: string }[] }) => (
-  <section className="py-20 px-6 bg-white">
-    <motion.div {...fadeInUp} className="max-w-2xl mx-auto">
-      <div className="text-center mb-12">
-        <p className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Transport</p>
-        <h2 className="text-2xl font-serif text-stone-800 tracking-tighter mt-3">오시는 길</h2>
-      </div>
-      <div className="space-y-4">
-        {items.map((item, i) => (
-          <div key={i} className="bg-stone-50 rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-stone-800 mb-2">{item.method}</h3>
-            <p className="text-sm text-stone-500 leading-relaxed">{item.description}</p>
-          </div>
-        ))}
-      </div>
+      {transportation.length > 0 && (
+        <div className="space-y-3 pt-4 border-t border-stone-100">
+          <p className="text-[15px] tracking-[0.5em] text-wedding-primary font-bold uppercase text-center">오시는 길</p>
+          {transportation.map((item, i) => (
+            <div key={i} className="bg-stone-50 rounded-xl p-4">
+              <p className="text-[15px] font-bold text-stone-800 mb-1">{item.method}</p>
+              <p className="text-[15px] text-stone-500 leading-relaxed">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   </section>
 );
@@ -441,39 +393,39 @@ const AccountSection = ({ data }: { data: WeddingInfo }) => {
   };
 
   return (
-    <section className="py-32 px-6 bg-[#fafaf9]">
-      <motion.div {...fadeInUp} className="max-w-2xl mx-auto space-y-20">
+    <section className="py-10 md:py-14 px-6 bg-[#fafaf9]">
+      <motion.div {...fadeInUp} className="max-w-2xl mx-auto space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-serif text-stone-800 tracking-tighter italic">Gift for the Couple</h2>
-          <p className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase mt-4">Registry</p>
+          <h2 className="text-2xl font-serif text-stone-800 tracking-tighter italic">Gift for the Couple</h2>
+          <p className="text-[13px] tracking-[0.5em] text-wedding-primary uppercase mt-3">Registry</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             { label: `신랑 ${data.groom.name}`, info: data.groom },
             { label: `신부 ${data.bride.name}`, info: data.bride }
           ].map((side, i) => (
             <motion.div
               key={i}
-              whileHover={{ y: -10 }}
-              className="bg-white p-10 rounded-[3rem] shadow-xl shadow-stone-200/40 border border-stone-50 space-y-6"
+              whileHover={{ y: -5 }}
+              className="bg-white p-6 rounded-[2rem] shadow-lg shadow-stone-200/40 border border-stone-50 space-y-4"
             >
-              <div className="text-center border-b border-stone-100 pb-6">
-                <p className="text-[10px] text-stone-400 uppercase tracking-widest mb-1">{side.label}</p>
-                <p className="text-xs text-wedding-primary font-bold">마음 전하실 곳</p>
+              <div className="text-center border-b border-stone-100 pb-4">
+                <p className="text-[13px] text-stone-400 uppercase tracking-widest mb-1">{side.label}</p>
+                <p className="text-[15px] text-wedding-primary font-bold">마음 전하실 곳</p>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <p className="text-[9px] text-stone-400 uppercase tracking-widest">{side.info.account.bank}</p>
-                    <p className="text-lg font-serif text-stone-800 tracking-tighter">{side.info.account.number}</p>
-                    <p className="text-[11px] text-stone-500 font-light">예금주: {side.info.account.owner}</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[12px] text-stone-400 uppercase tracking-widest">{side.info.account.bank}</p>
+                    <p className="text-base font-serif text-stone-800 tracking-tighter">{side.info.account.number}</p>
+                    <p className="text-[15px] text-stone-500 font-light">예금주: {side.info.account.owner}</p>
                   </div>
                   <motion.button
                     whileTap={{ scale: 0.8 }}
                     onClick={() => copy(side.info.account.number)}
-                    className="p-4 bg-stone-50 rounded-full text-stone-300 hover:text-wedding-primary transition-colors"
+                    className="p-3 bg-stone-50 rounded-full text-stone-300 hover:text-wedding-primary transition-colors"
                   >
-                    <Copy size={18} />
+                    <Copy size={14} />
                   </motion.button>
                 </div>
               </div>
@@ -525,18 +477,18 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
   }
 
   return (
-    <section className="py-24 px-6 bg-white">
+    <section className="py-10 md:py-14 px-6 bg-white">
       <motion.div {...fadeInUp} className="max-w-2xl mx-auto text-center">
-        <p className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase font-bold">RSVP</p>
-        <h2 className="text-2xl font-serif text-stone-800 tracking-tighter mt-3 mb-2">참석 여부</h2>
-        <p className="text-sm text-stone-400 mb-8">소중한 분들의 참석 여부를 알려주세요</p>
+        <p className="text-[15px] tracking-[0.5em] text-wedding-primary uppercase font-bold">RSVP</p>
+        <h2 className="text-xl font-serif text-stone-800 tracking-tighter mt-3 mb-1">참석 여부</h2>
+        <p className="text-[15px] text-stone-400 mb-6">소중한 분들의 참석 여부를 알려주세요</p>
 
         {!showForm && !submitted && (
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onToggle}
-            className="px-10 py-4 bg-stone-900 text-white rounded-2xl text-sm font-bold"
+            className="px-8 py-3 bg-stone-900 text-white rounded-2xl text-sm font-bold"
           >
             참석 여부 전달하기
           </motion.button>
@@ -551,9 +503,9 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
               onSubmit={handleSubmit}
               className="overflow-hidden text-left"
             >
-              <div className="bg-stone-50 rounded-2xl p-6 space-y-4 mt-6">
+              <div className="bg-stone-50 rounded-2xl p-5 space-y-3 mt-4">
                 <div>
-                  <label className="text-[10px] text-stone-400 uppercase tracking-widest">이름</label>
+                  <label className="text-[15px] text-stone-400 uppercase tracking-widest">이름</label>
                   <input
                     value={name}
                     onChange={e => setName(e.target.value)}
@@ -562,7 +514,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-stone-400 uppercase tracking-widest">연락처</label>
+                  <label className="text-[15px] text-stone-400 uppercase tracking-widest">연락처</label>
                   <input
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
@@ -573,7 +525,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-stone-400 uppercase tracking-widest">구분</label>
+                    <label className="text-[15px] text-stone-400 uppercase tracking-widest">구분</label>
                     <select
                       value={side}
                       onChange={e => setSide(e.target.value as 'groom' | 'bride')}
@@ -584,7 +536,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] text-stone-400 uppercase tracking-widest">인원</label>
+                    <label className="text-[15px] text-stone-400 uppercase tracking-widest">인원</label>
                     <input
                       type="number"
                       min={1}
@@ -596,7 +548,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] text-stone-400 uppercase tracking-widest">참석 여부</label>
+                  <label className="text-[15px] text-stone-400 uppercase tracking-widest">참석 여부</label>
                   <div className="flex gap-3 mt-1">
                     <button
                       type="button"
@@ -619,7 +571,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] text-stone-400 uppercase tracking-widest">메시지 (선택)</label>
+                  <label className="text-[15px] text-stone-400 uppercase tracking-widest">메시지 (선택)</label>
                   <textarea
                     value={message}
                     onChange={e => setMessage(e.target.value)}
@@ -687,21 +639,21 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
   }
 
   return (
-    <section className="py-24 px-6 bg-[#fafaf9]">
+    <section className="py-10 md:py-14 px-6 bg-[#fafaf9]">
       <motion.div {...fadeInUp} className="max-w-2xl mx-auto">
-        <div className="text-center mb-12">
-          <p className="text-[10px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Guestbook</p>
-          <h2 className="text-2xl font-serif text-stone-800 tracking-tighter mt-3 mb-2">방명록</h2>
-          <p className="text-sm text-stone-400">축하 메시지를 남겨주세요</p>
+        <div className="text-center mb-8">
+          <p className="text-[15px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Guestbook</p>
+          <h2 className="text-xl font-serif text-stone-800 tracking-tighter mt-3 mb-1">방명록</h2>
+          <p className="text-[15px] text-stone-400">축하 메시지를 남겨주세요</p>
         </div>
 
         {!showForm && !submitted && (
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onToggle}
-              className="px-10 py-4 bg-stone-900 text-white rounded-2xl text-sm font-bold"
+              className="px-8 py-3 bg-stone-900 text-white rounded-2xl text-sm font-bold"
             >
               방명록 작성하기
             </motion.button>
@@ -715,11 +667,11 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleSubmit}
-              className="overflow-hidden mb-12"
+              className="overflow-hidden mb-8"
             >
-              <div className="bg-white rounded-2xl p-6 space-y-4 shadow-sm border border-stone-100">
+              <div className="bg-white rounded-2xl p-5 space-y-3 shadow-sm border border-stone-100">
                 <div>
-                  <label className="text-[10px] text-stone-400 uppercase tracking-widest">이름</label>
+                  <label className="text-[15px] text-stone-400 uppercase tracking-widest">이름</label>
                   <input
                     value={name}
                     onChange={e => setName(e.target.value)}
@@ -728,7 +680,7 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-stone-400 uppercase tracking-widest">비밀번호 (삭제 시 필요)</label>
+                  <label className="text-[15px] text-stone-400 uppercase tracking-widest">비밀번호 (삭제 시 필요)</label>
                   <input
                     type="password"
                     value={password}
@@ -738,7 +690,7 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-stone-400 uppercase tracking-widest">메시지</label>
+                  <label className="text-[15px] text-stone-400 uppercase tracking-widest">메시지</label>
                   <textarea
                     value={message}
                     onChange={e => setMessage(e.target.value)}
@@ -763,9 +715,9 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-wedding-primary text-sm font-bold text-center mb-12"
-          >
-            방명록이 등록되었습니다. 감사합니다.
+              className="text-wedding-primary text-sm font-bold text-center mb-8"
+            >
+              방명록이 등록되었습니다. 감사합니다.
           </motion.p>
         )}
 
@@ -782,12 +734,12 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center text-white text-[15px] font-bold">
                       {entry.name[0]}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-stone-800">{entry.name}</p>
-                      <p className="text-[10px] text-stone-400">{new Date(entry.createdAt).toLocaleDateString('ko-KR')}</p>
+                      <p className="text-[15px] text-stone-400">{new Date(entry.createdAt).toLocaleDateString('ko-KR')}</p>
                     </div>
                   </div>
                   <button
@@ -819,36 +771,42 @@ const Footer = ({ data, onKakaoShare, onCopyLink }: {
   onKakaoShare: () => void
   onCopyLink: () => void
 }) => (
-  <footer className="py-40 bg-[#1a1a1a] text-center px-10 relative overflow-hidden">
-    <motion.div {...fadeInUp} className="relative z-10 space-y-16">
-      <div className="flex flex-col items-center gap-8">
-        <p className="text-white/40 text-[10px] tracking-[0.5em] uppercase">Share our love</p>
-        <div className="flex gap-4">
+  <footer className="py-8 bg-gradient-to-t from-[#1a1a1a] to-[#2a2a2a] text-center px-8 relative overflow-hidden">
+    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+    <motion.div {...fadeInUp} className="relative z-10 space-y-8">
+      <div className="flex flex-col items-center gap-4">
+        <p className="text-white/40 text-[12px] tracking-[0.5em] uppercase font-light">SNS</p>
+        <div className="flex gap-3">
           <motion.button
             whileHover={{ scale: 1.1, backgroundColor: "#FEE500" }}
             whileTap={{ scale: 0.9 }}
             onClick={onKakaoShare}
-            className="w-16 h-16 bg-[#FEE500] text-[#3C1E1E] rounded-full flex items-center justify-center shadow-2xl shadow-yellow-900/40"
+            className="w-10 h-10 bg-[#FEE500] text-[#3C1E1E] rounded-full flex items-center justify-center shadow-lg shadow-yellow-900/30"
           >
-            <MessageCircle size={24} className="fill-current" />
+            <MessageCircle size={16} className="fill-current" />
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.1, backgroundColor: "#fff" }}
             whileTap={{ scale: 0.9 }}
             onClick={onCopyLink}
-            className="w-16 h-16 bg-white/5 text-white/40 rounded-full flex items-center justify-center border border-white/10 hover:text-stone-900"
+            className="w-10 h-10 bg-white/5 text-white/40 rounded-full flex items-center justify-center border border-white/10 hover:text-stone-900"
           >
-            <Share2 size={24} />
+            <Share2 size={16} />
           </motion.button>
         </div>
       </div>
 
-      <div className="pt-20 border-t border-white/5 space-y-6">
-        <p className="text-[10px] tracking-[1em] text-stone-600 uppercase italic">Everlasting</p>
-        <p className="text-sm text-stone-400 font-serif italic tracking-widest uppercase">
-          {data.groom.name} & {data.bride.name}
+      <div className="space-y-2">
+        <p className="text-[13px] tracking-[0.4em] text-stone-500 uppercase font-serif italic">
+          {data.groom.name} &middot; {data.bride.name}
         </p>
-        <p className="text-[9px] text-stone-700 font-light mt-10">© 2024 BESPOKE WEDDING INVITATION</p>
+        <p className="text-[12px] text-stone-700 font-light tracking-widest">
+          서로의 마음을 전합니다
+        </p>
+      </div>
+
+      <div className="pt-4 border-t border-white/5">
+        <p className="text-[11px] text-stone-800 font-light tracking-[0.3em]">© 2024 WEDDING INVITATION</p>
       </div>
     </motion.div>
   </footer>
