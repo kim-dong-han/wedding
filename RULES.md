@@ -8,7 +8,7 @@
 - `src/data/wedding-info.ts`는 데이터 스키마의 단일 진실 공급원(SSOT) — 타입 변경은
   여기서만, 다른 곳에 타입 재정의 금지
 - 하객용 화면(`/`)의 데이터는 반드시 `C:\wedding-backend`(Spring Boot REST API,
-  `http://localhost:8081`)를 통해서만 가져올 것 — localStorage 직접 읽기/쓰기 금지
+  `http://localhost:8082`)를 통해서만 가져올 것 — localStorage 직접 읽기/쓰기 금지
   (ARCHITECTURE.md 참조). 관리자 기능은 React가 아니라 백엔드의 Thymeleaf
   화면(`/admin`)에서만 구현 — React 쪽에 관리자 페이지를 다시 만들지 말 것
 - 컴포넌트는 필요할 때만 분리. `App.tsx`/`AdminPage.tsx` 내부 함수형 컴포넌트

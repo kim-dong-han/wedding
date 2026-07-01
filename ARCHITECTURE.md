@@ -6,15 +6,15 @@
 ## 시스템 구조
 - 프론트엔드(`C:\wedding`, 이 저장소)와 백엔드(`C:\wedding-backend`, 별도
   프로젝트/저장소)로 완전히 분리됨
-- 하객용 청첩장 화면(`/`)은 React SPA. 백엔드 REST API(`http://localhost:8081/api/**`)를
+- 하객용 청첩장 화면(`/`)은 React SPA. 백엔드 REST API(`http://localhost:8082/api/**`)를
   fetch로 호출해 데이터를 읽고 씀
 - 관리자 화면(`/admin`)은 React가 아니라 **백엔드의 Thymeleaf 서버 렌더링 화면**.
   React 쪽에는 관리자 페이지가 존재하지 않음
 - 데이터 영속성은 MariaDB(`wedding_db`) 하나로 통합 (localStorage 사용 안 함)
 
 ```
-[하객 브라우저] --fetch(JSON)--> [Spring Boot :8081 /api/**] --JPA--> [MariaDB wedding_db]
-[신랑/신부 브라우저] --폼 제출/세션--> [Spring Boot :8081 /admin/** (Thymeleaf)] --JPA--> [MariaDB]
+[하객 브라우저] --fetch(JSON)--> [Spring Boot :8082 /api/**] --JPA--> [MariaDB wedding_db]
+[신랑/신부 브라우저] --폼 제출/세션--> [Spring Boot :8082 /admin/** (Thymeleaf)] --JPA--> [MariaDB]
 ```
 
 ## 프론트엔드 패키지 구조 (`C:\wedding`)
@@ -54,7 +54,7 @@ com.wedding.backend
 ├─ admin/        # /admin/** Thymeleaf 컨트롤러 + 세션 인증 인터셉터
 └─ config/       # CORS, 인터셉터 등록
 ```
-- `application.yml`: `server.port=8081`, `spring.datasource.*`(MariaDB),
+- `application.yml`: `server.port=8082`, `spring.datasource.*`(MariaDB),
   `app.admin.password`(기본 `admin1234`, 환경변수 `ADMIN_PASSWORD`로 교체),
   `app.cors.allowed-origins`(기본 `http://localhost:5173`)
 - DB 비밀번호는 `DB_PASSWORD` 환경변수로 주입 (코드/설정 파일에 평문 커밋 금지)
@@ -83,6 +83,6 @@ com.wedding.backend
 
 ## 로컬 실행 순서
 1. MariaDB(Windows 서비스명 `MySQL`) 실행 확인: `Get-Service MySQL`
-2. 백엔드: `cd C:\wedding-backend && ./gradlew.bat bootRun` (포트 8081)
+2. 백엔드: `cd C:\wedding-backend && ./gradlew.bat bootRun` (포트 8082)
 3. 프론트엔드: `cd C:\wedding && npm run dev` (포트 5173)
-4. 하객 화면: http://localhost:5173 , 관리자 화면: http://localhost:8081/admin
+4. 하객 화면: http://localhost:5173 , 관리자 화면: http://localhost:8082/admin
