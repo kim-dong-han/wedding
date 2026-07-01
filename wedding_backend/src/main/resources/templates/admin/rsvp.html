@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>참석여부 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='rsvp')}"></nav>
+    <main class="admin-main">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <h2>참석여부 (RSVP)</h2>
+                <a class="btn" th:href="@{/admin/rsvp/export}">CSV 내보내기</a>
+            </div>
+            <table class="table">
+                <thead>
+                <tr><th>이름</th><th>구분</th><th>인원</th><th>참석</th><th>연락처</th><th>메시지</th><th>응답일</th><th></th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${rsvps}">
+                    <td th:text="${r.name}"></td>
+                    <td th:text="${r.side == 'groom'} ? '신랑' : '신부'"></td>
+                    <td th:text="${r.guests}"></td>
+                    <td>
+                        <span class="badge yes" th:if="${r.attending}">참석</span>
+                        <span class="badge no" th:unless="${r.attending}">불참</span>
+                    </td>
+                    <td th:text="${r.phone}"></td>
+                    <td th:text="${r.message}"></td>
+                    <td th:text="${#temporals.format(r.createdAt, 'yyyy-MM-dd')}"></td>
+                    <td>
+                        <form th:action="@{/admin/rsvp/{id}/delete(id=${r.id})}" method="post">
+                            <button type="submit" class="btn danger">삭제</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <p class="empty" th:if="${rsvps.isEmpty()}">아직 응답이 없습니다.</p>
+        </div>
+    </main>
+</div>
+</body>
+</html>

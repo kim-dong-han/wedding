@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="header" class="admin-header">
+    <h1>청첩장 관리자</h1>
+    <form th:action="@{/admin/logout}" method="post">
+        <button type="submit" class="link">로그아웃</button>
+    </form>
+</div>
+
+<nav th:fragment="nav(active)" class="admin-nav">
+    <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'active'">대시보드</a>
+    <a th:href="@{/admin/basic}" th:classappend="${active == 'basic'} ? 'active'">기본 정보</a>
+    <a th:href="@{/admin/account}" th:classappend="${active == 'account'} ? 'active'">계좌 정보</a>
+    <a th:href="@{/admin/gallery}" th:classappend="${active == 'gallery'} ? 'active'">갤러리</a>
+    <a th:href="@{/admin/interview}" th:classappend="${active == 'interview'} ? 'active'">인터뷰</a>
+    <a th:href="@{/admin/notices}" th:classappend="${active == 'notices'} ? 'active'">공지사항</a>
+    <a th:href="@{/admin/transport}" th:classappend="${active == 'transport'} ? 'active'">교통안내</a>
+    <a th:href="@{/admin/animation}" th:classappend="${active == 'animation'} ? 'active'">오프닝</a>
+    <a th:href="@{/admin/bgm}" th:classappend="${active == 'bgm'} ? 'active'">배경음악</a>
+    <a th:href="@{/admin/rsvp}" th:classappend="${active == 'rsvp'} ? 'active'">참석여부</a>
+    <a th:href="@{/admin/guestbook}" th:classappend="${active == 'guestbook'} ? 'active'">방명록</a>
+</nav>
+
+</body>
+</html>

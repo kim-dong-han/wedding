@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>방명록 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='guestbook')}"></nav>
+    <main class="admin-main">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <h2>방명록</h2>
+                <span th:text="'총 ' + ${entries.size()} + '개'"></span>
+            </div>
+            <div class="item-row" th:each="e : ${entries}">
+                <p style="font-weight:bold; margin:0 0 6px" th:text="${e.name}"></p>
+                <p style="white-space:pre-wrap; margin:0 0 10px" th:text="${e.message}"></p>
+                <p style="color:#a8a29e; font-size:12px; margin:0 0 10px" th:text="${#temporals.format(e.createdAt, 'yyyy-MM-dd')}"></p>
+                <form th:action="@{/admin/guestbook/{id}/delete(id=${e.id})}" method="post" style="text-align:right">
+                    <button type="submit" class="btn danger">삭제</button>
+                </form>
+            </div>
+            <p class="empty" th:if="${entries.isEmpty()}">아직 방명록이 없습니다.</p>
+        </div>
+    </main>
+</div>
+</body>
+</html>

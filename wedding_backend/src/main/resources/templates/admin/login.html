@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>관리자 로그인</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="login-wrap">
+    <div class="login-card">
+        <h1>Admin</h1>
+        <form th:action="@{/admin/login}" method="post">
+            <div class="field" style="text-align:left">
+                <label>비밀번호</label>
+                <input type="password" name="password" placeholder="비밀번호를 입력하세요" autofocus>
+            </div>
+            <button type="submit" class="btn" style="width:100%; justify-content:center">로그인</button>
+            <p class="error-text" th:if="${error}" th:text="${error}"></p>
+        </form>
+    </div>
+</div>
+</body>
+</html>

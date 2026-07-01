@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>인터뷰 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='interview')}"></nav>
+    <main class="admin-main">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <h2>신랑신부 인터뷰</h2>
+                <form th:action="@{/admin/interview/add}" method="post">
+                    <button type="submit" class="btn">질문 추가</button>
+                </form>
+            </div>
+            <div class="item-row" th:each="item, iter : ${info.interview}">
+                <form th:action="@{/admin/interview/update}" method="post">
+                    <input type="hidden" name="index" th:value="${iter.index}">
+                    <div class="field">
+                        <label th:text="'Q' + ${iter.index + 1}"></label>
+                        <input type="text" name="question" th:value="${item.question}" placeholder="질문을 입력하세요">
+                    </div>
+                    <div class="field">
+                        <label>답변</label>
+                        <textarea name="answer" rows="3" th:text="${item.answer}" placeholder="답변을 입력하세요"></textarea>
+                    </div>
+                    <div class="row-actions">
+                        <button type="submit" class="btn secondary">저장</button>
+                    </div>
+                </form>
+                <form th:action="@{/admin/interview/remove}" method="post" style="text-align:right">
+                    <input type="hidden" name="index" th:value="${iter.index}">
+                    <button type="submit" class="btn danger">삭제</button>
+                </form>
+            </div>
+            <p class="empty" th:if="${info.interview.isEmpty()}">등록된 인터뷰가 없습니다.</p>
+        </div>
+    </main>
+</div>
+</body>
+</html>

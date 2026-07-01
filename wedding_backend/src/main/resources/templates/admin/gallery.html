@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>갤러리 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='gallery')}"></nav>
+    <main class="admin-main">
+        <div class="card">
+            <h2>갤러리 관리</h2>
+            <form th:action="@{/admin/gallery/add}" method="post" style="display:flex; gap:10px; margin-bottom:24px">
+                <input type="text" name="url" placeholder="이미지 URL 입력" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid #e7e5e4">
+                <button type="submit" class="btn">추가</button>
+            </form>
+            <div class="gallery-grid">
+                <div class="gallery-item" th:each="url, iter : ${info.gallery}">
+                    <img th:src="${url}" alt="갤러리 이미지">
+                    <div class="controls">
+                        <form th:action="@{/admin/gallery/move}" method="post">
+                            <input type="hidden" name="index" th:value="${iter.index}">
+                            <input type="hidden" name="direction" value="-1">
+                            <button type="submit" title="위로">▲</button>
+                        </form>
+                        <form th:action="@{/admin/gallery/move}" method="post">
+                            <input type="hidden" name="index" th:value="${iter.index}">
+                            <input type="hidden" name="direction" value="1">
+                            <button type="submit" title="아래로">▼</button>
+                        </form>
+                        <form th:action="@{/admin/gallery/remove}" method="post">
+                            <input type="hidden" name="index" th:value="${iter.index}">
+                            <button type="submit" title="삭제">삭제</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <p class="empty" th:if="${info.gallery.isEmpty()}">등록된 이미지가 없습니다.</p>
+        </div>
+    </main>
+</div>
+</body>
+</html>

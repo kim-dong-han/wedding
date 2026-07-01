@@ -1,0 +1,26 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: wedding-backend
+  datasource:
+    url: jdbc:mariadb://localhost:3306/wedding_db
+    username: root
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  thymeleaf:
+    cache: false
+
+app:
+  admin:
+    password: ${ADMIN_PASSWORD:admin1234}
+  cors:
+    allowed-origins: http://localhost:5173

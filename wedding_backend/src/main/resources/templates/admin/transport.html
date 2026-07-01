@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>교통안내 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='transport')}"></nav>
+    <main class="admin-main">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <h2>교통 안내</h2>
+                <form th:action="@{/admin/transport/add}" method="post">
+                    <button type="submit" class="btn">추가</button>
+                </form>
+            </div>
+            <div class="item-row" th:each="item, iter : ${info.transportation}">
+                <form th:action="@{/admin/transport/update}" method="post">
+                    <input type="hidden" name="index" th:value="${iter.index}">
+                    <div class="field">
+                        <label>교통수단</label>
+                        <input type="text" name="method" th:value="${item.method}" placeholder="지하철, 버스, 주차 등">
+                    </div>
+                    <div class="field">
+                        <label>상세 안내</label>
+                        <textarea name="description" rows="2" th:text="${item.description}" placeholder="상세 안내"></textarea>
+                    </div>
+                    <div class="row-actions">
+                        <button type="submit" class="btn secondary">저장</button>
+                    </div>
+                </form>
+                <form th:action="@{/admin/transport/remove}" method="post" style="text-align:right">
+                    <input type="hidden" name="index" th:value="${iter.index}">
+                    <button type="submit" class="btn danger">삭제</button>
+                </form>
+            </div>
+            <p class="empty" th:if="${info.transportation.isEmpty()}">등록된 교통 안내가 없습니다.</p>
+        </div>
+    </main>
+</div>
+</body>
+</html>

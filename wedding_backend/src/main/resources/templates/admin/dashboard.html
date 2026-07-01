@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>대시보드 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='dashboard')}"></nav>
+    <main class="admin-main">
+        <div class="card">
+            <h2>대시보드</h2>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="label">참석 확정</div>
+                    <div class="value" th:text="${attendingCount} + '명'">0명</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">불참</div>
+                    <div class="value" th:text="${notAttendingCount} + '명'">0명</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">신랑측</div>
+                    <div class="value" th:text="${groomCount} + '명'">0명</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">신부측</div>
+                    <div class="value" th:text="${brideCount} + '명'">0명</div>
+                </div>
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="card">
+                <div class="label">RSVP 응답률</div>
+                <div class="value" style="font-size:28px;font-weight:bold" th:text="${responseRate} + '%'">0%</div>
+                <p style="color:#a8a29e;font-size:13px" th:text="'전체 ' + ${totalInvited} + '명 응답'"></p>
+            </div>
+            <div class="card">
+                <div class="label">방명록</div>
+                <div class="value" style="font-size:28px;font-weight:bold" th:text="${guestbookCount} + '개'">0개</div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

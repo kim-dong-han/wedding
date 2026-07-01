@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기본 정보 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='basic')}"></nav>
+    <main class="admin-main">
+        <form class="card" th:action="@{/admin/basic}" method="post">
+            <h2>기본 정보</h2>
+            <div class="grid-2">
+                <div class="field">
+                    <label>날짜</label>
+                    <input type="date" name="date" th:value="${info.date}">
+                </div>
+                <div class="field">
+                    <label>시간</label>
+                    <input type="time" name="time" th:value="${info.time}">
+                </div>
+            </div>
+            <div class="field">
+                <label>인사말</label>
+                <textarea name="message" rows="4" th:text="${info.message}"></textarea>
+            </div>
+            <div class="field">
+                <label>예식장 이름</label>
+                <input type="text" name="locationName" th:value="${info.location.name}">
+            </div>
+            <div class="field">
+                <label>홀</label>
+                <input type="text" name="locationHall" th:value="${info.location.hall}">
+            </div>
+            <div class="field">
+                <label>주소</label>
+                <input type="text" name="locationAddress" th:value="${info.location.address}">
+            </div>
+            <div class="grid-2">
+                <div class="field">
+                    <label>위도 (lat)</label>
+                    <input type="number" step="any" name="lat" th:value="${info.location.lat}">
+                </div>
+                <div class="field">
+                    <label>경도 (lng)</label>
+                    <input type="number" step="any" name="lng" th:value="${info.location.lng}">
+                </div>
+            </div>
+            <div class="field">
+                <label>전화번호</label>
+                <input type="text" name="locationPhone" th:value="${info.location.phone}">
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <h3>신랑</h3>
+                    <div class="field"><label>이름</label><input type="text" name="groomName" th:value="${info.groom.name}"></div>
+                    <div class="field"><label>관계</label><input type="text" name="groomParentRelation" th:value="${info.groom.parentRelation}"></div>
+                    <div class="field"><label>아버지</label><input type="text" name="groomFather" th:value="${info.groom.father}"></div>
+                    <div class="field"><label>어머니</label><input type="text" name="groomMother" th:value="${info.groom.mother}"></div>
+                </div>
+                <div>
+                    <h3>신부</h3>
+                    <div class="field"><label>이름</label><input type="text" name="brideName" th:value="${info.bride.name}"></div>
+                    <div class="field"><label>관계</label><input type="text" name="brideParentRelation" th:value="${info.bride.parentRelation}"></div>
+                    <div class="field"><label>아버지</label><input type="text" name="brideFather" th:value="${info.bride.father}"></div>
+                    <div class="field"><label>어머니</label><input type="text" name="brideMother" th:value="${info.bride.mother}"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn">저장하기</button>
+        </form>
+    </main>
+</div>
+</body>
+</html>

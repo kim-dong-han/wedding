@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공지사항 - 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments :: header}"></div>
+<div class="admin-layout">
+    <nav th:replace="~{admin/fragments :: nav(active='notices')}"></nav>
+    <main class="admin-main">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <h2>공지사항</h2>
+                <form th:action="@{/admin/notices/add}" method="post">
+                    <button type="submit" class="btn">공지 추가</button>
+                </form>
+            </div>
+            <div class="item-row" th:each="item, iter : ${info.notices}">
+                <form th:action="@{/admin/notices/update}" method="post">
+                    <input type="hidden" name="index" th:value="${iter.index}">
+                    <div class="field">
+                        <label>제목</label>
+                        <input type="text" name="title" th:value="${item.title}" placeholder="공지 제목">
+                    </div>
+                    <div class="field">
+                        <label>내용</label>
+                        <textarea name="content" rows="3" th:text="${item.content}" placeholder="공지 내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="row-actions">
+                        <button type="submit" class="btn secondary">저장</button>
+                    </div>
+                </form>
+                <form th:action="@{/admin/notices/remove}" method="post" style="text-align:right">
+                    <input type="hidden" name="index" th:value="${iter.index}">
+                    <button type="submit" class="btn danger">삭제</button>
+                </form>
+            </div>
+            <p class="empty" th:if="${info.notices.isEmpty()}">등록된 공지사항이 없습니다.</p>
+        </div>
+    </main>
+</div>
+</body>
+</html>
