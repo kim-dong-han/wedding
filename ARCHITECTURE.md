@@ -4,62 +4,85 @@
 > 이 문서 + 관련 파일 1~2개만 열어서 작업할 것.
 
 ## 시스템 구조
-- 순수 클라이언트 SPA (백엔드 서버 없음, API 없음)
-- 빌드 결과물(`dist/`)을 Cloudflare Pages가 정적 서빙
-- 데이터 영속성은 브라우저 `localStorage`뿐 (기기/브라우저 종속, 서버 동기화 없음)
+- 프론트엔드(`C:\wedding`, 이 저장소)와 백엔드(`C:\wedding-backend`, 별도
+  프로젝트/저장소)로 완전히 분리됨
+- 하객용 청첩장 화면(`/`)은 React SPA. 백엔드 REST API(`http://localhost:8081/api/**`)를
+  fetch로 호출해 데이터를 읽고 씀
+- 관리자 화면(`/admin`)은 React가 아니라 **백엔드의 Thymeleaf 서버 렌더링 화면**.
+  React 쪽에는 관리자 페이지가 존재하지 않음
+- 데이터 영속성은 MariaDB(`wedding_db`) 하나로 통합 (localStorage 사용 안 함)
 
 ```
-[사용자 브라우저]
-   ├─ / (WeddingPage)  → localStorage 읽기 → 청첩장 렌더링
-   └─ /admin (AdminPage) → 비밀번호 확인 → localStorage 읽기/쓰기 → 즉시 반영
+[하객 브라우저] --fetch(JSON)--> [Spring Boot :8081 /api/**] --JPA--> [MariaDB wedding_db]
+[신랑/신부 브라우저] --폼 제출/세션--> [Spring Boot :8081 /admin/** (Thymeleaf)] --JPA--> [MariaDB]
 ```
 
-## 패키지 구조
+## 프론트엔드 패키지 구조 (`C:\wedding`)
 ```
 src/
 ├─ main.tsx              # 엔트리, 라우터 등록
-├─ App.tsx                # '/' 라우트. 청첩장 전체 섹션 (824줄, 단일 파일)
+├─ App.tsx                # '/' 라우트만 존재. 청첩장 전체 섹션
 │   ├─ SectionNav, WeddingPage, Greeting, GallerySection
 │   ├─ LocationSection, AccountSection, RsvpSection
 │   └─ GuestbookSection, Footer
-├─ pages/
-│   └─ AdminPage.tsx      # '/admin' 라우트. CMS (932줄, 단일 파일)
-│       ├─ AdminPage(로그인) → AdminDashboard
-│       └─ 탭별 Editor 컴포넌트 11개 (BasicInfoEditor, GalleryEditor 등)
 ├─ components/
 │   └─ MainCover.tsx      # 첫 화면 커버 (오프닝 애니메이션)
 └─ data/
-    └─ wedding-info.ts    # 타입 정의 + 기본값 + localStorage read/write 함수
-                           # ★ 신규 고객 커스텀 작업 시 최우선 수정 대상
+    └─ wedding-info.ts    # 타입 정의(SSOT) + 백엔드 fetch 함수 모음
+                           # ★ API 스키마 변경 시 최우선 수정 대상
 ```
-
-**주의**: `App.tsx`, `AdminPage.tsx`는 800~900줄대 단일 파일. 특정 섹션만 고칠 때는
-Grep으로 해당 컴포넌트(`const XxxSection = ...`) 위치만 찾아 그 블록만 Read할 것
-(파일 전체를 컨텍스트에 올리지 말 것).
+`AdminPage.tsx`는 관리자 기능이 백엔드로 이전되며 삭제됨.
 
 ## 데이터 흐름
-1. `defaultWeddingData` (data/wedding-info.ts) — 최초 기본값
-2. `loadWeddingData()` — localStorage(`STORAGE_KEYS.weddingData`)에서 읽기, 없으면 기본값
-3. React state (App.tsx / AdminPage.tsx 내부) — 렌더링에 사용
-4. `saveWeddingData(data)` — Admin에서 저장 시 localStorage에 즉시 write
-5. RSVP(`rsvps`), 방명록(`guestbook`)도 동일 패턴 (`loadRsvps/saveRsvps`, `loadGuestbook/saveGuestbook`)
+1. `WeddingPage` 마운트 시 `useEffect`에서 `fetchWeddingInfo()`, `fetchGuestbook()` 호출
+2. 로딩 전(`data === null`)에는 아무것도 렌더링하지 않음 (`if (!data) return null`)
+3. RSVP 제출 → `submitRsvp()`로 `POST /api/rsvp` (응답을 화면에 유지할 필요 없어 상태 저장 안 함)
+4. 방명록 작성 → `submitGuestbookEntry()`로 `POST /api/guestbook`, 응답을 로컬 목록에 append
+5. 방명록 삭제 → 비밀번호 입력 → `deleteGuestbookEntry(id, password)`로
+   `DELETE /api/guestbook/{id}` (비밀번호 검증은 서버의 BCrypt 해시 비교로만 수행,
+   클라이언트는 평문 비밀번호를 절대 보관하지 않음)
 
-서버 API, 데이터베이스, 외부 fetch 없음 — 전부 클라이언트 로컬 상태.
+## 백엔드 구조 (`C:\wedding-backend`, Spring Boot 3.5 / Gradle)
+```
+com.wedding.backend
+├─ domain/       # WeddingInfo(싱글턴 id=1), Person/Location/... (@Embeddable),
+│                 # RsvpEntry, GuestbookEntry (@Entity)
+├─ repository/   # JpaRepository 3종
+├─ service/      # WeddingInfoService, RsvpService, GuestbookService
+├─ dto/          # WeddingInfoDto 등 — React WeddingInfo 인터페이스와 1:1 매칭되는 JSON 응답
+├─ api/          # /api/** REST 컨트롤러 (공개, 인증 없음 — CORS로 프론트 오리진만 허용)
+├─ admin/        # /admin/** Thymeleaf 컨트롤러 + 세션 인증 인터셉터
+└─ config/       # CORS, 인터셉터 등록
+```
+- `application.yml`: `server.port=8081`, `spring.datasource.*`(MariaDB),
+  `app.admin.password`(기본 `admin1234`, 환경변수 `ADMIN_PASSWORD`로 교체),
+  `app.cors.allowed-origins`(기본 `http://localhost:5173`)
+- DB 비밀번호는 `DB_PASSWORD` 환경변수로 주입 (코드/설정 파일에 평문 커밋 금지)
 
 ## 인증 방식
-- `AdminPage.tsx`의 `handleLogin()`에서 **하드코딩된 비밀번호 문자열**을 비교하는 방식
-- 세션/토큰/서버 검증 없음, `authenticated` 로컬 state로만 화면 전환
-- 보안 등급: 데모/개인용 수준. 실서비스 민감정보 보호용으로 취급하지 말 것
-- 고객사 인계 시 비밀번호 변경 필수 (코드 내 리터럴 직접 수정)
+- 관리자: `POST /admin/login`에서 `app.admin.password`와 비교 → 세션(`HttpSession`)에
+  플래그 저장 → `AdminAuthInterceptor`가 `/admin/**`(login/logout 제외) 접근 시 검사
+- 방명록 삭제: 사용자가 입력한 비밀번호를 BCrypt로 해시해 DB에 저장, 삭제 시
+  `BCryptPasswordEncoder.matches()`로 검증 (평문 비교 아님)
+- 보안 등급: 여전히 소규모 개인 서비스 수준. 실제 운영 전환 시 관리자 비밀번호를
+  반드시 교체하고 HTTPS 적용 필요
 
-## DB 구조 (= localStorage 스키마)
-DB 없음. `localStorage` 키 3개, `STORAGE_KEYS` (data/wedding-info.ts)로 정의:
+## DB 구조 (MariaDB `wedding_db`)
+| 테이블 | 설명 |
+|---|---|
+| `wedding_info` | 싱글턴 행(id=1). 신랑/신부(`groom_*`/`bride_*` 접두 컬럼), 날짜/시간,
+  장소, 인사말, 오프닝(`opening_*`), BGM(`bgm_*`) |
+| `wedding_gallery` | 갤러리 이미지 URL 목록 (`@ElementCollection`, 순서 보존) |
+| `wedding_interview` / `wedding_notice` / `wedding_transport` | 인터뷰/공지/교통안내 목록 |
+| `rsvp_entry` | RSVP 응답 (id는 UUID 문자열) |
+| `guestbook_entry` | 방명록 (`password_hash`만 저장, 평문 비밀번호 없음) |
 
-| key | 타입 | 설명 |
-|---|---|---|
-| `weddingData` | `WeddingInfo` (JSON) | 신랑/신부 정보, 계좌, 날짜, 장소, 갤러리, 인터뷰 등 |
-| `rsvps` | `RsvpEntry[]` (JSON) | 참석 여부 응답 |
-| `guestbook` | `GuestbookEntry[]` (JSON) | 방명록 |
+`WeddingInfo` 관련 필드의 Single Source of Truth는 여전히
+`src/data/wedding-info.ts`의 TS 인터페이스(React 쪽)이며, 백엔드
+`WeddingInfoDto`는 이 인터페이스와 필드명이 1:1로 매칭되도록 유지해야 함.
 
-`WeddingInfo` 필드 구조는 `src/data/wedding-info.ts`의 `interface WeddingInfo` 원본이
-Single Source of Truth이므로 여기 중복 기술하지 않음 — 필요 시 해당 파일만 Read.
+## 로컬 실행 순서
+1. MariaDB(Windows 서비스명 `MySQL`) 실행 확인: `Get-Service MySQL`
+2. 백엔드: `cd C:\wedding-backend && ./gradlew.bat bootRun` (포트 8081)
+3. 프론트엔드: `cd C:\wedding && npm run dev` (포트 5173)
+4. 하객 화면: http://localhost:5173 , 관리자 화면: http://localhost:8081/admin

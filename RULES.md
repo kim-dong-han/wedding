@@ -7,8 +7,10 @@
 - 새 파일/새 추상화를 만들기 전에 기존 파일에 추가할 수 있는지 먼저 확인
 - `src/data/wedding-info.ts`는 데이터 스키마의 단일 진실 공급원(SSOT) — 타입 변경은
   여기서만, 다른 곳에 타입 재정의 금지
-- 백엔드/DB/외부 API를 새로 도입하는 제안은 하지 말 것 (ARCHITECTURE.md 참조,
-  의도적으로 서버리스/localStorage 구조 유지 중)
+- 하객용 화면(`/`)의 데이터는 반드시 `C:\wedding-backend`(Spring Boot REST API,
+  `http://localhost:8081`)를 통해서만 가져올 것 — localStorage 직접 읽기/쓰기 금지
+  (ARCHITECTURE.md 참조). 관리자 기능은 React가 아니라 백엔드의 Thymeleaf
+  화면(`/admin`)에서만 구현 — React 쪽에 관리자 페이지를 다시 만들지 말 것
 - 컴포넌트는 필요할 때만 분리. `App.tsx`/`AdminPage.tsx` 내부 함수형 컴포넌트
   패턴(`const Xxx = (...) => {}`)을 그대로 따름 — 새 디렉토리 구조 제안 금지
 
@@ -22,9 +24,10 @@
 - 아이콘은 `lucide-react`만 사용
 
 ## 사용 기술 제한
-- 패키지 추가 시 반드시 먼저 물어볼 것 (특히 상태관리 라이브러리, UI 프레임워크,
-  백엔드 SDK — 이 프로젝트는 의존성 최소화가 목표)
-- 허용된 스택 외 기술(Redux, GraphQL, Next.js 전환, ORM 등) 제안 금지
+- React 쪽 패키지 추가 시 반드시 먼저 물어볼 것 (특히 상태관리 라이브러리, UI
+  프레임워크 — 프론트엔드는 의존성 최소화가 목표)
+- 허용된 스택 외 기술(Redux, GraphQL, Next.js 전환 등) 제안 금지. 백엔드(Spring
+  Boot/JPA/MariaDB)는 이미 도입된 스택이므로 관련 라이브러리 추가는 정상 범위
 - 이미지/미디어는 `public/`에 직접 배치, CDN·업로드 서비스 연동 제안 금지
 
 ## 출력 규칙 (토큰 절약)

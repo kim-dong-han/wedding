@@ -1,9 +1,11 @@
 import { Routes, Route } from 'react-router-dom';
 import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
-import { loadWeddingData, loadRsvps, saveRsvps, loadGuestbook, saveGuestbook, type WeddingInfo, type RsvpEntry, type GuestbookEntry } from './data/wedding-info';
+import {
+  fetchWeddingInfo, fetchGuestbook, submitRsvp, submitGuestbookEntry, deleteGuestbookEntry,
+  type WeddingInfo, type RsvpEntry, type GuestbookEntry,
+} from './data/wedding-info';
 import { MapPin, Phone, Copy, Heart, Share2, MessageCircle, X, Send, Play, Pause } from 'lucide-react';
 import MainCover from './components/MainCover';
-import AdminPage from './pages/AdminPage';
 import { useEffect, useState, useRef } from 'react';
 
 const fadeInUp = {
@@ -61,9 +63,8 @@ const SectionNav = () => {
 }
 
 function WeddingPage() {
-  const [data] = useState<WeddingInfo>(() => loadWeddingData())
-  const [rsvps, setRsvps] = useState<RsvpEntry[]>(() => loadRsvps())
-  const [guestbook, setGuestbook] = useState<GuestbookEntry[]>(() => loadGuestbook())
+  const [data, setData] = useState<WeddingInfo | null>(null)
+  const [guestbook, setGuestbook] = useState<GuestbookEntry[]>([])
   const [showRsvpForm, setShowRsvpForm] = useState(false)
   const [showGuestbookForm, setShowGuestbookForm] = useState(false)
   const [showQr, setShowQr] = useState(false)
@@ -88,12 +89,9 @@ function WeddingPage() {
   });
 
   useEffect(() => {
-    saveRsvps(rsvps)
-  }, [rsvps])
-
-  useEffect(() => {
-    saveGuestbook(guestbook)
-  }, [guestbook])
+    fetchWeddingInfo().then(setData).catch(() => {})
+    fetchGuestbook().then(setGuestbook).catch(() => {})
+  }, [])
 
   const handleKakaoShare = () => {
     alert('카카오톡 공유 기능을 실행합니다. (실제 운영 시 Kakao SDK 연동 필요)');
@@ -103,6 +101,8 @@ function WeddingPage() {
     navigator.clipboard.writeText(window.location.href);
     alert('링크가 복사되었습니다.');
   };
+
+  if (!data) return null;
 
   return (
     <main className="max-w-screen-sm mx-auto bg-[#fafaf9] min-h-screen relative shadow-[0_0_150px_rgba(0,0,0,0.1)] selection:bg-stone-900 selection:text-white">
@@ -180,7 +180,12 @@ function WeddingPage() {
         <RsvpSection
           showForm={showRsvpForm}
           onToggle={() => setShowRsvpForm(!showRsvpForm)}
-          onSubmit={(entry) => setRsvps(prev => [...prev, entry])}
+          onSubmit={(entry) => {
+            submitRsvp({
+              name: entry.name, side: entry.side, guests: entry.guests,
+              attending: entry.attending, message: entry.message, phone: entry.phone,
+            }).catch(() => {})
+          }}
         />
       </div>
 
@@ -189,15 +194,21 @@ function WeddingPage() {
           entries={guestbook}
           showForm={showGuestbookForm}
           onToggle={() => setShowGuestbookForm(!showGuestbookForm)}
-          onSubmit={(entry) => setGuestbook(prev => [...prev, entry])}
-          onDelete={(id) => {
-            const pw = prompt('방명록 비밀번호를 입력하세요');
-            const entry = guestbook.find(g => g.id === id);
-            if (entry && pw === entry.password) {
-              setGuestbook(prev => prev.filter(g => g.id !== id));
-            } else {
-              alert('비밀번호가 올바르지 않습니다.');
-            }
+          onSubmit={(entry) => {
+            submitGuestbookEntry(entry)
+              .then(saved => setGuestbook(prev => [...prev, saved]))
+              .catch(() => {})
+          }}
+          onDelete={(id, password) => {
+            deleteGuestbookEntry(id, password)
+              .then(ok => {
+                if (ok) {
+                  setGuestbook(prev => prev.filter(g => g.id !== id));
+                } else {
+                  alert('비밀번호가 올바르지 않습니다.');
+                }
+              })
+              .catch(() => alert('삭제에 실패했습니다.'))
           }}
         />
       </div>
@@ -609,8 +620,8 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
   entries: GuestbookEntry[]
   showForm: boolean
   onToggle: () => void
-  onSubmit: (entry: GuestbookEntry) => void
-  onDelete: (id: string) => void
+  onSubmit: (entry: { name: string; message: string; password: string }) => void
+  onDelete: (id: string, password: string) => void
 }) => {
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
@@ -622,11 +633,9 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
     e.preventDefault()
     if (!name.trim() || !message.trim() || !password.trim()) return
     onSubmit({
-      id: crypto.randomUUID(),
       name: name.trim(),
       message: message.trim(),
       password,
-      createdAt: new Date().toISOString(),
     })
     setSubmitted(true)
     setName('')
@@ -745,10 +754,8 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
                   <button
                     onClick={() => {
                       const pw = prompt('비밀번호를 입력하세요');
-                      if (pw === entry.password) {
-                        onDelete(entry.id);
-                      } else if (pw !== null) {
-                        alert('비밀번호가 올바르지 않습니다.');
+                      if (pw !== null) {
+                        onDelete(entry.id, pw);
                       }
                     }}
                     className="text-stone-300 hover:text-red-400 transition-colors"
@@ -816,7 +823,6 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<WeddingPage />} />
-      <Route path="/admin" element={<AdminPage />} />
     </Routes>
   );
 }
