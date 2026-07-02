@@ -8,8 +8,8 @@ export default {
     extend: {
       colors: {
         wedding: {
-          primary: '#8E9775', // 차분한 그린 (예시)
-          secondary: '#E28E8E', // 부드러운 핑크
+          primary: 'var(--wedding-primary, #8E9775)',
+          secondary: 'var(--wedding-secondary, #E28E8E)',
           accent: '#fafaf9', // 오프 화이트
         }
       },

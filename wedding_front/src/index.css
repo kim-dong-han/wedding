@@ -7,6 +7,8 @@
 :root {
   font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
   scroll-behavior: smooth;
+  --wedding-primary: #8E9775;
+  --wedding-secondary: #C98A8A;
 }
 
 body {
@@ -15,4 +17,8 @@ body {
 
 .font-serif {
   font-family: 'Nanum Myeongjo', serif;
+}
+
+.font-mood-gothic .font-serif {
+  font-family: 'Pretendard', sans-serif !important;
 }

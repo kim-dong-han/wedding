@@ -4,9 +4,12 @@ import {
   fetchWeddingInfo, fetchGuestbook, submitRsvp, submitGuestbookEntry, deleteGuestbookEntry,
   type WeddingInfo, type RsvpEntry, type GuestbookEntry,
 } from './data/wedding-info';
-import { MapPin, Phone, Copy, Heart, Share2, MessageCircle, X, Send, Play, Pause } from 'lucide-react';
+import { MapPin, Phone, Copy, Heart, Share2, MessageCircle, X, Send, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 import MainCover from './components/MainCover';
 import { useEffect, useState, useRef } from 'react';
+import Home from './pages/Home';
+import Builder from './pages/Builder';
+import { loadBuilderData, applyBuilderTheme } from './data/builder-store';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -19,11 +22,10 @@ const SectionNav = () => {
   const sections = [
     { id: 'cover', label: 'Cover' },
     { id: 'greeting', label: 'Greeting' },
+    { id: 'interview', label: 'Interview' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'location', label: 'Location' },
-    { id: 'account', label: 'Account' },
-    { id: 'rsvp', label: 'RSVP' },
-    { id: 'guestbook', label: 'Guestbook' },
+    { id: 'connect', label: 'Connect' },
   ]
   const [active, setActive] = useState(0)
 
@@ -89,7 +91,21 @@ function WeddingPage() {
   });
 
   useEffect(() => {
-    fetchWeddingInfo().then(setData).catch(() => {})
+    const overrides = loadBuilderData()
+    applyBuilderTheme(overrides)
+    fetchWeddingInfo()
+      .then(info => {
+        if (!overrides) { setData(info); return; }
+        setData({
+          ...info,
+          groom: { ...info.groom, name: overrides.groomName || info.groom.name },
+          bride: { ...info.bride, name: overrides.brideName || info.bride.name },
+          date: overrides.date || info.date,
+          time: overrides.time || info.time,
+          location: { ...info.location, name: overrides.venueName || info.location.name, address: overrides.venueAddress || info.location.address },
+        })
+      })
+      .catch(() => {})
     fetchGuestbook().then(setGuestbook).catch(() => {})
   }, [])
 
@@ -172,34 +188,30 @@ function WeddingPage() {
 
       <div id="cover"><MainCover data={data} /></div>
       <div id="greeting"><Greeting data={data} /></div>
+      <div id="interview"><InterviewSection interview={data.interview} /></div>
       <div id="gallery"><GallerySection images={data.gallery} /></div>
-      <div id="location"><LocationSection data={data} transportation={data.transportation} /></div>
-      <div id="account"><AccountSection data={data} /></div>
+      <div id="location"><LocationSection data={data} transportation={data.transportation} notices={data.notices} /></div>
 
-      <div id="rsvp">
-        <RsvpSection
-          showForm={showRsvpForm}
-          onToggle={() => setShowRsvpForm(!showRsvpForm)}
-          onSubmit={(entry) => {
+      <div id="connect">
+        <ConnectSection
+          data={data}
+          guestbook={guestbook}
+          showRsvpForm={showRsvpForm}
+          onToggleRsvp={() => setShowRsvpForm(!showRsvpForm)}
+          onSubmitRsvp={(entry) => {
             submitRsvp({
               name: entry.name, side: entry.side, guests: entry.guests,
               attending: entry.attending, message: entry.message, phone: entry.phone,
             }).catch(() => {})
           }}
-        />
-      </div>
-
-      <div id="guestbook">
-        <GuestbookSection
-          entries={guestbook}
-          showForm={showGuestbookForm}
-          onToggle={() => setShowGuestbookForm(!showGuestbookForm)}
-          onSubmit={(entry) => {
+          showGuestbookForm={showGuestbookForm}
+          onToggleGuestbook={() => setShowGuestbookForm(!showGuestbookForm)}
+          onSubmitGuestbook={(entry) => {
             submitGuestbookEntry(entry)
               .then(saved => setGuestbook(prev => [...prev, saved]))
               .catch(() => {})
           }}
-          onDelete={(id, password) => {
+          onDeleteGuestbook={(id, password) => {
             deleteGuestbookEntry(id, password)
               .then(ok => {
                 if (ok) {
@@ -218,6 +230,54 @@ function WeddingPage() {
   );
 }
 
+/** 특정 날짜가 속한 달의 달력 그리드를 만든다. */
+const getCalendarGrid = (dateStr: string) => {
+  const d = new Date(dateStr);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const targetDate = d.getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return { targetDate, weeks };
+};
+
+const CalendarWidget = ({ date }: { date: string }) => {
+  const { targetDate, weeks } = getCalendarGrid(date);
+  const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  return (
+    <div className="bg-white rounded-2xl border border-stone-100 p-6">
+      <p className="text-center font-serif text-sm text-stone-500 tracking-[0.3em] uppercase mb-5">
+        {new Date(date).toLocaleDateString('en', { month: 'long' })} {new Date(date).getFullYear()}
+      </p>
+      <div className="grid grid-cols-7 gap-y-2 text-center">
+        {dayLabels.map((d, i) => (
+          <span key={i} className="text-[11px] text-stone-300 uppercase tracking-widest">{d}</span>
+        ))}
+        {weeks.flat().map((day, i) => (
+          <span key={i} className="flex items-center justify-center h-9">
+            {day && (
+              <span
+                className={`flex items-center justify-center w-8 h-8 rounded-full text-[13px] transition-colors ${
+                  day === targetDate ? 'bg-wedding-primary text-white font-bold' : 'text-stone-500'
+                }`}
+              >
+                {day}
+              </span>
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const Greeting = ({ data }: { data: WeddingInfo }) => {
   const [daysLeft, setDaysLeft] = useState(0);
 
@@ -229,55 +289,43 @@ const Greeting = ({ data }: { data: WeddingInfo }) => {
   }, [data.date]);
 
   return (
-  <section className="py-10 md:py-14 px-8 text-center bg-[#fafaf9] relative overflow-hidden">
+  <section className="py-10 md:py-12 px-8 text-center bg-[#fafaf9] relative overflow-hidden">
     <motion.div
       initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 1.5 }}
-      className="max-w-lg mx-auto space-y-8"
+      className="max-w-lg mx-auto space-y-6"
     >
       <div className="relative flex flex-col items-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-8 w-20 h-20 border border-stone-200 rounded-full border-dashed"
-        />
-        <Heart size={24} className="text-wedding-secondary/30 fill-wedding-secondary/5 relative z-10" />
+        <Heart size={20} className="text-wedding-secondary/40 fill-wedding-secondary/10 relative z-10" />
       </div>
 
-      <p className="text-stone-700 font-serif font-light leading-[2.4] text-lg md:text-2xl whitespace-pre-line italic px-2 tracking-tighter">
+      <p className="text-stone-700 font-serif font-light leading-[2.1] text-base md:text-lg whitespace-pre-line px-2">
         {data.message}
       </p>
 
-      {/* Wedding Info Card */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 space-y-3">
-        <p className="text-[15px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Wedding Day</p>
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex-shrink-0 flex flex-col items-center w-10 h-10 bg-white rounded-lg border border-stone-200 shadow-sm overflow-hidden">
-            <span className="text-[6px] bg-wedding-primary text-white w-full py-0.5 font-bold uppercase tracking-wider leading-none">
-              {new Date(data.date).toLocaleDateString('en', { month: 'short' })}
-            </span>
-            <span className="text-sm font-serif font-bold text-stone-800 leading-none mt-0.5">
-              {parseInt(data.date.split('-')[2])}
-            </span>
-          </div>
+      <div className="space-y-3">
+        <CalendarWidget date={data.date} />
+
+        <div className="bg-white rounded-2xl p-6 border border-stone-100 space-y-2">
+          <p className="text-[13px] tracking-[0.4em] text-wedding-primary uppercase font-bold">Wedding Day</p>
           <p className="text-base font-serif text-stone-800">
             {new Date(data.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
           </p>
-        </div>
-        <p className="text-sm text-stone-500">{data.time}</p>
-        <div className="w-6 h-[1px] bg-stone-200 mx-auto" />
-        <p className="text-sm text-stone-700 font-medium">{data.location.name}</p>
-        {data.location.hall && <p className="text-[15px] text-wedding-primary">{data.location.hall}</p>}
-        <p className="text-[15px] text-stone-400">{data.location.address}</p>
-        <div className="pt-2">
-          <span className="inline-block px-3 py-1 bg-wedding-primary/10 text-wedding-primary text-[15px] font-bold rounded-full">
-            D-{daysLeft}
-          </span>
+          <p className="text-sm text-stone-500">{data.time}</p>
+          <div className="w-6 h-[1px] bg-stone-200 mx-auto my-3" />
+          <p className="text-sm text-stone-700 font-medium">{data.location.name}</p>
+          {data.location.hall && <p className="text-[13px] text-wedding-primary">{data.location.hall}</p>}
+          <p className="text-[13px] text-stone-400">{data.location.address}</p>
+          <div className="pt-2">
+            <span className="inline-block px-3 py-1 bg-wedding-primary/10 text-wedding-primary text-[13px] font-bold rounded-full">
+              D-{daysLeft}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="pt-6 border-t border-stone-200 flex flex-col gap-4">
+      <div className="pt-4 border-t border-stone-200 flex flex-col gap-3">
         {[data.groom, data.bride].map((person, i) => (
           <motion.div
             key={i}
@@ -285,13 +333,13 @@ const Greeting = ({ data }: { data: WeddingInfo }) => {
             className="flex items-center justify-between group px-4"
           >
             <div className="text-left">
-              <p className="text-[13px] text-stone-400 mb-0.5 uppercase tracking-widest">Parent</p>
-              <p className="text-[15px] text-stone-600 font-light leading-relaxed">
+              <p className="text-[12px] text-stone-400 mb-0.5 uppercase tracking-widest">Parent</p>
+              <p className="text-[13px] text-stone-600 font-light leading-relaxed">
                 {person.parents.father} <span className="text-stone-300 mx-0.5">·</span> {person.parents.mother}
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-[15px] text-wedding-primary/60 italic font-medium uppercase tracking-tighter">
+              <span className="text-[13px] text-wedding-primary/60 italic font-medium uppercase tracking-tighter">
                 {person.parentRelation}
               </span>
               <span className="font-serif text-2xl md:text-3xl text-stone-900 tracking-tighter group-hover:italic transition-all">
@@ -305,43 +353,115 @@ const Greeting = ({ data }: { data: WeddingInfo }) => {
   </section>
 );}
 
-const GallerySection = ({ images }: { images: string[] }) => {
-  if (!images || images.length === 0) return null;
+const InterviewSection = ({ interview }: { interview: { question: string; answer: string }[] }) => {
+  if (!interview || interview.length === 0) return null;
 
   return (
-    <section className="py-8 md:py-12 bg-[#fafaf9]">
-      <motion.div {...fadeInUp} className="text-center mb-8">
-        <h2 className="text-3xl font-serif text-stone-800 tracking-tighter mb-3 italic">The Moments</h2>
+    <section className="py-8 md:py-10 px-6 bg-white">
+      <motion.div {...fadeInUp} className="max-w-2xl mx-auto">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-serif text-stone-800 tracking-tighter italic">We Asked</h2>
+          <p className="text-[13px] tracking-[0.5em] text-wedding-primary uppercase mt-3">Interview</p>
+        </div>
+        <div className="space-y-4">
+          {interview.map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: i * 0.1 }}
+              className="border-b border-stone-100 pb-4 last:border-0 last:pb-0"
+            >
+              <p className="font-serif italic text-wedding-primary text-lg mb-2">Q. {item.question}</p>
+              <p className="text-stone-600 text-[15px] leading-relaxed pl-4">{item.answer}</p>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    </section>
+  );
+};
+
+const GallerySection = ({ images }: { images: string[] }) => {
+  const [selected, setSelected] = useState<number | null>(null);
+
+  if (!images || images.length === 0) return null;
+
+  const showPrev = () => setSelected(s => (s === null ? null : (s - 1 + images.length) % images.length));
+  const showNext = () => setSelected(s => (s === null ? null : (s + 1) % images.length));
+
+  return (
+    <section className="py-8 md:py-10 bg-[#fafaf9]">
+      <motion.div {...fadeInUp} className="text-center mb-6">
+        <h2 className="text-2xl font-serif text-stone-800 tracking-tighter mb-2 italic">The Moments</h2>
         <p className="text-[13px] tracking-[0.5em] text-wedding-primary uppercase">Eternal Love</p>
       </motion.div>
-      <div className="columns-2 gap-4 px-6 max-w-5xl mx-auto space-y-4">
+      <div className="grid grid-cols-3 gap-1.5 px-6 max-w-5xl mx-auto">
         {images.map((src, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.8, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
             viewport={{ once: true }}
-            whileHover={{ scale: 1.02, y: -5, transition: { duration: 0.3 } }}
-            className="break-inside-avoid rounded-2xl overflow-hidden shadow-lg shadow-stone-200/50 cursor-pointer group relative"
+            onClick={() => setSelected(i)}
+            className="aspect-square rounded-lg overflow-hidden cursor-pointer group relative"
           >
             <img
               src={src}
               alt="Wedding Gallery"
-              className="w-full h-auto object-cover transition-transform duration-1000 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
             <div className="absolute inset-0 bg-stone-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           </motion.div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {selected !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelected(null)}
+            className="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center px-4"
+          >
+            <button onClick={() => setSelected(null)} className="absolute top-6 right-6 text-white/70 hover:text-white">
+              <X size={22} />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); showPrev(); }}
+              className="absolute left-3 md:left-8 text-white/60 hover:text-white"
+            >
+              <ChevronLeft size={28} />
+            </button>
+            <motion.img
+              key={selected}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              src={images[selected]}
+              alt="Gallery view"
+              onClick={e => e.stopPropagation()}
+              className="max-h-[85vh] max-w-full object-contain rounded-lg"
+            />
+            <button
+              onClick={e => { e.stopPropagation(); showNext(); }}
+              className="absolute right-3 md:right-8 text-white/60 hover:text-white"
+            >
+              <ChevronRight size={28} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };
 
-const LocationSection = ({ data, transportation }: { data: WeddingInfo; transportation: { method: string; description: string }[] }) => (
-  <section className="py-10 md:py-14 px-6 bg-white">
-    <motion.div {...fadeInUp} className="max-w-4xl mx-auto space-y-8">
+const LocationSection = ({ data, transportation, notices }: { data: WeddingInfo; transportation: { method: string; description: string }[]; notices: { title: string; content: string }[] }) => (
+  <section className="py-8 md:py-10 px-6 bg-white">
+    <motion.div {...fadeInUp} className="max-w-4xl mx-auto space-y-6">
       <div className="text-center space-y-3">
         <p className="text-[15px] tracking-[0.8em] text-wedding-primary font-bold uppercase">Location</p>
         <h3 className="text-2xl font-serif text-stone-800 tracking-tighter">{data.location.name}</h3>
@@ -383,12 +503,24 @@ const LocationSection = ({ data, transportation }: { data: WeddingInfo; transpor
       </div>
 
       {transportation.length > 0 && (
-        <div className="space-y-3 pt-4 border-t border-stone-100">
-          <p className="text-[15px] tracking-[0.5em] text-wedding-primary font-bold uppercase text-center">오시는 길</p>
+        <div className="space-y-2 pt-3 border-t border-stone-100">
+          <p className="text-[13px] tracking-[0.5em] text-wedding-primary font-bold uppercase text-center">오시는 길</p>
           {transportation.map((item, i) => (
-            <div key={i} className="bg-stone-50 rounded-xl p-4">
-              <p className="text-[15px] font-bold text-stone-800 mb-1">{item.method}</p>
-              <p className="text-[15px] text-stone-500 leading-relaxed">{item.description}</p>
+            <div key={i} className="bg-stone-50 rounded-xl p-3">
+              <p className="text-[14px] font-bold text-stone-800 mb-1">{item.method}</p>
+              <p className="text-[14px] text-stone-500 leading-relaxed">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {notices && notices.length > 0 && (
+        <div className="space-y-2 pt-3 border-t border-stone-100">
+          <p className="text-[13px] tracking-[0.5em] text-wedding-primary font-bold uppercase text-center">Notice</p>
+          {notices.map((n, i) => (
+            <div key={i} className="bg-stone-50 rounded-xl p-3 text-center">
+              <p className="text-[13px] font-bold text-stone-800 mb-1">{n.title}</p>
+              <p className="text-[13px] text-stone-500 leading-relaxed whitespace-pre-line">{n.content}</p>
             </div>
           ))}
         </div>
@@ -397,58 +529,122 @@ const LocationSection = ({ data, transportation }: { data: WeddingInfo; transpor
   </section>
 );
 
-const AccountSection = ({ data }: { data: WeddingInfo }) => {
-  const copy = (num: string) => {
-    navigator.clipboard.writeText(num);
-    alert('계좌번호가 복사되었습니다.');
-  };
+const ConnectSection = ({
+  data, guestbook,
+  showRsvpForm, onToggleRsvp, onSubmitRsvp,
+  showGuestbookForm, onToggleGuestbook, onSubmitGuestbook, onDeleteGuestbook,
+}: {
+  data: WeddingInfo
+  guestbook: GuestbookEntry[]
+  showRsvpForm: boolean
+  onToggleRsvp: () => void
+  onSubmitRsvp: (entry: RsvpEntry) => void
+  showGuestbookForm: boolean
+  onToggleGuestbook: () => void
+  onSubmitGuestbook: (entry: { name: string; message: string; password: string }) => void
+  onDeleteGuestbook: (id: string, password: string) => void
+}) => {
+  const [tab, setTab] = useState<'account' | 'rsvp' | 'guestbook'>('account');
+  const tabs = [
+    { key: 'account' as const, label: '마음 전하실 곳' },
+    { key: 'rsvp' as const, label: '참석 여부' },
+    { key: 'guestbook' as const, label: '방명록' },
+  ];
 
   return (
-    <section className="py-10 md:py-14 px-6 bg-[#fafaf9]">
-      <motion.div {...fadeInUp} className="max-w-2xl mx-auto space-y-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-serif text-stone-800 tracking-tighter italic">Gift for the Couple</h2>
-          <p className="text-[13px] tracking-[0.5em] text-wedding-primary uppercase mt-3">Registry</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { label: `신랑 ${data.groom.name}`, info: data.groom },
-            { label: `신부 ${data.bride.name}`, info: data.bride }
-          ].map((side, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ y: -5 }}
-              className="bg-white p-6 rounded-[2rem] shadow-lg shadow-stone-200/40 border border-stone-50 space-y-4"
+    <section className="py-8 md:py-10 px-6 bg-[#fafaf9]">
+      <motion.div {...fadeInUp} className="max-w-2xl mx-auto">
+        <div className="flex gap-1 mb-6 bg-white rounded-full p-1 border border-stone-100 max-w-md mx-auto">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-1 py-2.5 rounded-full text-[13px] font-bold transition-colors ${
+                tab === t.key ? 'bg-stone-900 text-white' : 'text-stone-400'
+              }`}
             >
-              <div className="text-center border-b border-stone-100 pb-4">
-                <p className="text-[13px] text-stone-400 uppercase tracking-widest mb-1">{side.label}</p>
-                <p className="text-[15px] text-wedding-primary font-bold">마음 전하실 곳</p>
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-end">
-                  <div className="space-y-0.5">
-                    <p className="text-[12px] text-stone-400 uppercase tracking-widest">{side.info.account.bank}</p>
-                    <p className="text-base font-serif text-stone-800 tracking-tighter">{side.info.account.number}</p>
-                    <p className="text-[15px] text-stone-500 font-light">예금주: {side.info.account.owner}</p>
-                  </div>
-                  <motion.button
-                    whileTap={{ scale: 0.8 }}
-                    onClick={() => copy(side.info.account.number)}
-                    className="p-3 bg-stone-50 rounded-full text-stone-300 hover:text-wedding-primary transition-colors"
-                  >
-                    <Copy size={14} />
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
+              {t.label}
+            </button>
           ))}
         </div>
+
+        {tab === 'account' && <AccountPanel data={data} />}
+        {tab === 'rsvp' && <RsvpPanel showForm={showRsvpForm} onToggle={onToggleRsvp} onSubmit={onSubmitRsvp} />}
+        {tab === 'guestbook' && (
+          <GuestbookPanel
+            entries={guestbook}
+            showForm={showGuestbookForm}
+            onToggle={onToggleGuestbook}
+            onSubmit={onSubmitGuestbook}
+            onDelete={onDeleteGuestbook}
+          />
+        )}
       </motion.div>
     </section>
   );
 };
 
-const RsvpSection = ({ showForm, onToggle, onSubmit }: {
+const AccountPanel = ({ data }: { data: WeddingInfo }) => {
+  const [revealed, setRevealed] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copy = (num: string, key: string) => {
+    navigator.clipboard.writeText(num);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1500);
+  };
+
+  return !revealed ? (
+    <div className="text-center py-2">
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setRevealed(true)}
+        className="px-8 py-3 bg-stone-900 text-white rounded-2xl text-sm font-bold"
+      >
+        마음 전하실 곳 보기
+      </motion.button>
+    </div>
+  ) : (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+    >
+      {[
+        { label: `신랑 ${data.groom.name}`, info: data.groom, key: 'groom' },
+        { label: `신부 ${data.bride.name}`, info: data.bride, key: 'bride' }
+      ].map((side) => (
+        <div key={side.key} className="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 space-y-4">
+          <div className="text-center border-b border-stone-100 pb-4">
+            <p className="text-[12px] text-stone-400 uppercase tracking-widest">{side.label}</p>
+          </div>
+          <div className="flex justify-between items-end">
+            <div className="space-y-0.5">
+              <p className="text-[11px] text-stone-400 uppercase tracking-widest">{side.info.account.bank}</p>
+              <p className="text-base font-serif text-stone-800 tracking-tighter">{side.info.account.number}</p>
+              <p className="text-[13px] text-stone-500 font-light">예금주: {side.info.account.owner}</p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.8 }}
+              onClick={() => copy(side.info.account.number, side.key)}
+              className="p-3 bg-stone-50 rounded-full text-stone-300 hover:text-wedding-primary transition-colors relative"
+            >
+              <Copy size={14} />
+              {copiedKey === side.key && (
+                <span className="absolute -top-9 right-0 text-[11px] bg-stone-900 text-white px-2 py-1 rounded-md whitespace-nowrap">
+                  복사됨
+                </span>
+              )}
+            </motion.button>
+          </div>
+        </div>
+      ))}
+    </motion.div>
+  );
+};
+
+const RsvpPanel = ({ showForm, onToggle, onSubmit }: {
   showForm: boolean
   onToggle: () => void
   onSubmit: (entry: RsvpEntry) => void
@@ -488,11 +684,8 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
   }
 
   return (
-    <section className="py-10 md:py-14 px-6 bg-white">
-      <motion.div {...fadeInUp} className="max-w-2xl mx-auto text-center">
-        <p className="text-[15px] tracking-[0.5em] text-wedding-primary uppercase font-bold">RSVP</p>
-        <h2 className="text-xl font-serif text-stone-800 tracking-tighter mt-3 mb-1">참석 여부</h2>
-        <p className="text-[15px] text-stone-400 mb-6">소중한 분들의 참석 여부를 알려주세요</p>
+    <div className="text-center">
+      <p className="text-[14px] text-stone-400 mb-5">소중한 분들의 참석 여부를 알려주세요</p>
 
         {!showForm && !submitted && (
           <motion.button
@@ -514,14 +707,14 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
               onSubmit={handleSubmit}
               className="overflow-hidden text-left"
             >
-              <div className="bg-stone-50 rounded-2xl p-5 space-y-3 mt-4">
+              <div className="bg-white rounded-2xl p-5 space-y-3 mt-4 border border-stone-100">
                 <div>
                   <label className="text-[15px] text-stone-400 uppercase tracking-widest">이름</label>
                   <input
                     value={name}
                     onChange={e => setName(e.target.value)}
                     required
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
+                    className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
                   />
                 </div>
                 <div>
@@ -531,7 +724,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                     onChange={e => setPhone(e.target.value)}
                     placeholder="010-xxxx-xxxx"
                     required
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
+                    className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -540,7 +733,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                     <select
                       value={side}
                       onChange={e => setSide(e.target.value as 'groom' | 'bride')}
-                      className="w-full px-4 py-3 bg-white rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
+                      className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
                     >
                       <option value="groom">신랑측</option>
                       <option value="bride">신부측</option>
@@ -554,7 +747,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                       max={10}
                       value={guests}
                       onChange={e => setGuests(parseInt(e.target.value))}
-                      className="w-full px-4 py-3 bg-white rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
+                      className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20"
                     />
                   </div>
                 </div>
@@ -587,7 +780,7 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
                     value={message}
                     onChange={e => setMessage(e.target.value)}
                     rows={2}
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20 resize-none"
+                    className="w-full px-4 py-3 bg-stone-50 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20 resize-none"
                   />
                 </div>
                 <motion.button
@@ -611,12 +804,11 @@ const RsvpSection = ({ showForm, onToggle, onSubmit }: {
             감사합니다. 참석 여부가 전달되었습니다.
           </motion.p>
         )}
-      </motion.div>
-    </section>
+    </div>
   );
 };
 
-const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
+const GuestbookPanel = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
   entries: GuestbookEntry[]
   showForm: boolean
   onToggle: () => void
@@ -627,7 +819,7 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [submitted, setSubmitted] = useState(false)
-
+  const [showAll, setShowAll] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -647,17 +839,15 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
     }, 2000)
   }
 
+  const ordered = entries.slice().reverse();
+  const visible = showAll ? ordered : ordered.slice(0, 3);
+
   return (
-    <section className="py-10 md:py-14 px-6 bg-[#fafaf9]">
-      <motion.div {...fadeInUp} className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <p className="text-[15px] tracking-[0.5em] text-wedding-primary uppercase font-bold">Guestbook</p>
-          <h2 className="text-xl font-serif text-stone-800 tracking-tighter mt-3 mb-1">방명록</h2>
-          <p className="text-[15px] text-stone-400">축하 메시지를 남겨주세요</p>
-        </div>
+    <div>
+        <p className="text-[14px] text-stone-400 text-center mb-5">축하 메시지를 남겨주세요</p>
 
         {!showForm && !submitted && (
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -724,31 +914,29 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-              className="text-wedding-primary text-sm font-bold text-center mb-8"
+              className="text-wedding-primary text-sm font-bold text-center mb-6"
             >
               방명록이 등록되었습니다. 감사합니다.
           </motion.p>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {entries.length === 0 ? (
-            <p className="text-stone-400 text-sm text-center py-12">아직 방명록이 없습니다. 첫 메시지를 남겨주세요!</p>
+            <p className="text-stone-400 text-sm text-center py-8">아직 방명록이 없습니다. 첫 메시지를 남겨주세요!</p>
           ) : (
-            entries.slice().reverse().map(entry => (
-              <motion.div
+            visible.map(entry => (
+              <div
                 key={entry.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100"
+                className="bg-white rounded-2xl p-5 border border-stone-100"
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center text-white text-[15px] font-bold">
+                    <div className="w-7 h-7 bg-stone-900 rounded-full flex items-center justify-center text-white text-[13px] font-bold">
                       {entry.name[0]}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-stone-800">{entry.name}</p>
-                      <p className="text-[15px] text-stone-400">{new Date(entry.createdAt).toLocaleDateString('ko-KR')}</p>
+                      <p className="text-[12px] text-stone-400">{new Date(entry.createdAt).toLocaleDateString('ko-KR')}</p>
                     </div>
                   </div>
                   <button
@@ -760,16 +948,20 @@ const GuestbookSection = ({ entries, showForm, onToggle, onSubmit, onDelete }: {
                     }}
                     className="text-stone-300 hover:text-red-400 transition-colors"
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </button>
                 </div>
                 <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{entry.message}</p>
-              </motion.div>
+              </div>
             ))
           )}
+          {ordered.length > 3 && (
+            <button onClick={() => setShowAll(s => !s)} className="w-full text-center text-[13px] text-stone-400 py-2 hover:text-stone-600">
+              {showAll ? '접기' : `방명록 ${ordered.length}개 모두 보기`}
+            </button>
+          )}
         </div>
-      </motion.div>
-    </section>
+    </div>
   );
 };
 
@@ -822,7 +1014,9 @@ const Footer = ({ data, onKakaoShare, onCopyLink }: {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<WeddingPage />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/create" element={<Builder />} />
+      <Route path="/invitation" element={<WeddingPage />} />
     </Routes>
   );
 }
