@@ -1,0 +1,3 @@
+k-wedding.duckdns.org {
+    reverse_proxy backend:8082
+}
