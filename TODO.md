@@ -15,14 +15,17 @@
 - [x] React의 localStorage 읽기/쓰기를 전부 `fetch` 기반 API 호출로 교체
 - [x] 방명록 삭제 비밀번호를 BCrypt 해시로 저장/검증하도록 변경 (평문 저장 제거)
 - [x] Playwright E2E로 청첩장 렌더링/RSVP 제출/방명록 작성·삭제(오답/정답) 검증 완료
+- [x] Cloudflare Pages 빌드 설정 수정 (모노레포 전환 후 Root directory를 `/wedding_front`로 지정)
+- [x] 백엔드 AWS Lightsail 프로덕션 배포 (Docker Compose: Spring Boot + MariaDB + Caddy,
+      DuckDNS `k-wedding.duckdns.org` + Let's Encrypt 자동 HTTPS)
+- [x] 프론트(Cloudflare Pages)-백엔드(Lightsail) 연동: `VITE_API_BASE_URL`, `CORS_ALLOWED_ORIGINS`
+      환경변수 설정, 배포용 `Dockerfile`/`docker-compose.yml`/`Caddyfile` 추가
 
 ## 진행 중
 - [ ] (여기에 현재 작업 중인 항목을 적을 것)
 
 ## 예정
 - [ ] 신규 고객사 온보딩 체크리스트 문서화 (README 워크플로우 보완, 백엔드 배포 방법 포함)
-- [ ] 백엔드 프로덕션 배포 방식 결정 (서버 호스팅, MariaDB 운영 환경, HTTPS)
-- [ ] `C:\wedding-backend`를 별도 git 저장소로 초기화할지 결정
 
 ## 다음 세션 시작 시 Claude에게
 - 위 "진행 중" 항목만 먼저 확인하고 시작. PROJECT.md/ARCHITECTURE.md는
