@@ -3,6 +3,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8082';
 export interface WeddingInfo {
   groom: {
     name: string;
+    nameEn?: string;
     parentRelation: string;
     parents: {
       father: string;
@@ -16,6 +17,7 @@ export interface WeddingInfo {
   };
   bride: {
     name: string;
+    nameEn?: string;
     parentRelation: string;
     parents: {
       father: string;
